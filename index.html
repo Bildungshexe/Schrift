@@ -166,6 +166,10 @@
     .bar { height: 10px; background: var(--panel2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
     .bar > i { display: block; height: 100%; }
     .crit .val { grid-column: 2; color: var(--muted); font-size: 13px; }
+    .crit.kid { grid-template-columns: 150px 1fr; font-size: 15px; }
+    .crit.kid .val { color: var(--text); }
+    .all-crit { margin-top: 12px; }
+    .all-crit summary { cursor: pointer; color: var(--muted); min-height: 32px; }
     .tip { background: rgba(99,102,241,.14); border-radius: 10px; padding: 8px 10px; }
     .praise { background: rgba(16,185,129,.12); border-radius: 10px; padding: 8px 10px; }
     .stale { opacity: .55; }
@@ -714,6 +718,13 @@
             <option value="streng">streng – nur sehr vorlagengetreue Formen erreichen hohe Werte</option>
           </select>
           <p class="small muted">Gilt für den Formvergleich mit der Vorlage. Tropfen gibt es erst ab 50 Punkten.</p>
+          <h3>Auswertung für das Kind</h3>
+          <select class="input" id="resultViewSel">
+            <option value="kind">einfach – Gesamtwert, Bild und höchstens zwei Schwerpunkte (alle Werte zum Aufklappen)</option>
+            <option value="alle">ausführlich – alle Kriterien und Hinweise</option>
+          </select>
+          <p class="small" style="margin:8px 0 4px">Schwerpunkte (höchstens zwei). Ohne Auswahl zeigt die App das Kriterium mit dem größten Übungsbedarf.</p>
+          <div class="row" id="focusChips" style="flex-wrap:wrap;gap:6px"></div>
           <h3>Ziel-Schreibtempo</h3>
           <div class="row">
             <label class="field" style="flex:1"><span>von</span><select class="input" id="tempoMin"></select></label>
@@ -966,7 +977,7 @@ function defaultState() {
     backup: { lastAt: null, lastAutoDay: null },
     security: { enabled: false, autoLockMin: 0 },
     settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, panelOff: false, panelSide: 'auto', surface: 'creme', gridMm: 5, showErrors: true, tempoMin: 1.5, tempoMax: 4.5, ghost: 'auto', penStyle: 'classic',
-      simPressure: 0.5, strokeWidth: 'mittel', lowLatency: true, strictness: 'normal', rowsByMode: { letter: 1, word: 2, free: 3 } }
+      simPressure: 0.5, strokeWidth: 'mittel', lowLatency: true, strictness: 'normal', resultView: 'kind', focusCrit: [], rowsByMode: { letter: 1, word: 2, free: 3 } }
   };
 }
 const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
@@ -998,8 +1009,12 @@ function sanitizeUser(u) {
     prefs: isObj(u.prefs) ? u.prefs : null
   });
 }
+// Schwerpunkte, die die Lehrkraft für ein Kind wählen kann (Schlüssel der Kriterien)
+const FOCUS_OPTIONS = [['form', 'Form'], ['fit', 'Größe & Lage'], ['base', 'Grundlinie'], ['size', 'Mittelband-Höhe'], ['extent', 'Ober- & Unterlängen'],
+  ['prop', 'Proportion'], ['struct', 'Schlaufen & Bögen'], ['straight', 'Gerade Abstriche'], ['slant', 'Neigung'], ['dir', 'Bewegungsablauf'],
+  ['flu', 'Flüssigkeit'], ['tempo', 'Tempo'], ['rhythm', 'Rhythmus'], ['tremor', 'Ruhige Linie'], ['pressure', 'Druck']];
 // Diese Einstellungen gehören dem Kind (wandern beim Schreiberwechsel mit); der Rest gehört dem Gerät
-const USER_PREF_KEYS = ['lineRatio', 'guides', 'heftMm', 'panelOff', 'panelSide', 'surface', 'gridMm', 'showErrors', 'tempoMin', 'tempoMax', 'ghost', 'penStyle', 'strokeWidth', 'strictness', 'rowsByMode', 'simPressure'];
+const USER_PREF_KEYS = ['lineRatio', 'guides', 'heftMm', 'panelOff', 'panelSide', 'surface', 'gridMm', 'showErrors', 'tempoMin', 'tempoMax', 'ghost', 'penStyle', 'strokeWidth', 'strictness', 'rowsByMode', 'simPressure', 'resultView', 'focusCrit'];
 function sanitizeState(raw) {
   const s = defaultState();
   if (!isObj(raw)) raw = {};
@@ -1027,6 +1042,8 @@ function sanitizeSettings(st) {
   if (!['classic', 'emerald', 'fire', 'gold'].includes(s.settings.penStyle)) s.settings.penStyle = 'classic';
   s.settings.simPressure = clamp(num(Number(s.settings.simPressure), 0.5), 0.1, 1);
   if (!['auto', 'pen', 'touch'].includes(s.settings.inputMode)) s.settings.inputMode = 'auto';
+  if (!['kind', 'alle'].includes(s.settings.resultView)) s.settings.resultView = 'kind';
+  s.settings.focusCrit = Array.isArray(s.settings.focusCrit) ? s.settings.focusCrit.filter(k => FOCUS_OPTIONS.some(o => o[0] === k)).slice(0, 2) : [];
   if (!['fein', 'mittel', 'kraeftig'].includes(s.settings.strokeWidth)) s.settings.strokeWidth = 'mittel';
   if (!['mild', 'normal', 'streng'].includes(s.settings.strictness)) s.settings.strictness = 'normal';
   if (!['-1', '0', '1', '2', '3'].includes(String(s.settings.guides))) s.settings.guides = '3';
@@ -2840,16 +2857,31 @@ function renderResult(res, reaction) {
       el('div', { class: 'small muted' }, el('b', { style: 'color:#16a34a', text: 'grün' }), ' = auf der Vorlage · ', el('b', { style: 'color:#dc2626', text: 'rot' }), ' = daneben · ',
         el('b', { style: 'color:#f97316', text: 'orange' }), ' = fehlt noch · grau = Vorlage')));
   }
-  if (res.praise) box.append(el('p', { class: 'praise', text: '👍 ' + res.praise }));
-  if (res.tip) box.append(el('p', { class: 'tip', text: '🎯 Nächster Schritt: ' + res.tip }));
-  for (const c of res.crit) {
+  const critRow = (c, kid) => {
     const color = c.score >= 75 ? 'var(--ok)' : c.score >= 50 ? 'var(--warn)' : 'var(--bad)';
-    box.append(el('div', { class: 'crit' },
+    return el('div', { class: 'crit' + (kid ? ' kid' : '') },
       el('span', { text: c.name }),
       el('div', { class: 'bar' }, el('i', { style: `width:${c.score}%;background:${color}` })),
-      el('span', { class: 'val', text: `${c.score} · ${c.value}` })));
+      el('span', { class: 'val', text: kid ? (c.score >= 75 ? '😀 klappt gut' : c.score >= 50 ? '🙂 fast' : '💪 übe das') : `${c.score} · ${c.value}` }));
+  };
+  const all = [...res.crit.map(c => critRow(c, false)), ...(res.info.length ? [el('ul', { class: 'info' }, res.info.map(t => el('li', { text: t })))] : [])];
+  if (appData.settings.resultView === 'alle') {
+    if (res.praise) box.append(el('p', { class: 'praise', text: '👍 ' + res.praise }));
+    if (res.tip) box.append(el('p', { class: 'tip', text: '🎯 Nächster Schritt: ' + res.tip }));
+    box.append(...all);
+  } else {
+    // Kinderansicht: höchstens zwei Schwerpunkte – die gewählten oder der mit dem größten Übungsbedarf
+    const focus = appData.settings.focusCrit.map(k => res.crit.find(c => c.key === k)).filter(Boolean);
+    const weak = [...res.crit].sort((a, b) => a.score - b.score).find(c => c.tip && c.score < 75);
+    const shown = focus.length ? focus : weak ? [weak] : [];
+    const tipC = shown.find(c => c.tip && c.score < 75);
+    if (res.traced) box.append(el('p', { class: 'small muted', text: '✏️ Mit Spurhilfe geschrieben – das ist Nachspuren. Weniger Tropfen, aber gutes Üben.' }));
+    if (tipC) box.append(el('p', { class: 'tip', text: '🎯 Darauf achtest du jetzt: ' + tipC.tip }));
+    else if (focus.length) box.append(el('p', { class: 'praise', text: '👍 Deine Schwerpunkte klappen gut!' }));
+    else if (res.praise) box.append(el('p', { class: 'praise', text: '👍 ' + res.praise }));
+    for (const c of shown) box.append(critRow(c, true));
+    box.append(el('details', { class: 'all-crit' }, el('summary', { class: 'small', text: 'Alle Werte (für Erwachsene)' }), ...all));
   }
-  if (res.info.length) box.append(el('ul', { class: 'info' }, res.info.map(t => el('li', { text: t }))));
   box.append(el('p', { class: 'small muted', text: 'Richtwerte: Entscheidend ist, dass deine Schrift gut lesbar ist und sich locker anfühlt. Die gewählte Schriftform wird nie bewertet – alle Formen sind gleichwertig.' }));
 }
 
@@ -3411,6 +3443,16 @@ function renderUsers() {
     `Gespeicherte Stift-Übungen: ${log.length}. Schreibe 3–5 Übungen mit lockerer Hand und übernimm dann den Wert.`;
   $('focusInput').value = u.focusLetters.join(', ');
   $('strictSel').value = appData.settings.strictness;
+  $('resultViewSel').value = appData.settings.resultView;
+  const fc = $('focusChips'); fc.replaceChildren();
+  for (const [k, name] of FOCUS_OPTIONS) {
+    const on = appData.settings.focusCrit.includes(k);
+    fc.append(el('button', { type: 'button', class: 'chip' + (on ? ' active' : ''), text: name, onclick: () => {
+      const f = appData.settings.focusCrit;
+      if (on) f.splice(f.indexOf(k), 1); else { if (f.length >= 2) f.shift(); f.push(k); }
+      saveState(); renderUsers();
+    } }));
+  }
   for (const [id, key] of [['tempoMin', 'tempoMin'], ['tempoMax', 'tempoMax']]) {
     const sel = $(id); if (!sel.options.length) for (let v = 0.5; v <= 8; v += 0.5) sel.append(el('option', { value: String(v), text: fmt(v) + ' Hz' }));
     sel.value = String(appData.settings[key]);
@@ -3439,6 +3481,7 @@ function initUsers() {
     if (u.pressureLog.length < 3) { toast('Dafür braucht es mindestens 3 Übungen mit einem Drucksensor-Stift.'); return; }
     u.pressureBaseline = r2(median(u.pressureLog.slice(-5))); saveState(); renderUsers(); toast('Normaldruck übernommen.');
   });
+  $('resultViewSel').addEventListener('change', e => { appData.settings.resultView = e.target.value; saveState(); toast('Ansicht der Auswertung gespeichert.'); });
   $('strictSel').addEventListener('change', e => { appData.settings.strictness = e.target.value; saveState(); toast('Strenge gespeichert.'); });
   const tempoChange = () => {
     let lo = Number($('tempoMin').value), hi = Number($('tempoMax').value);

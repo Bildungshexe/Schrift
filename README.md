@@ -4,9 +4,23 @@
 
 ## Starten
 
-`index.html` im Browser öffnen. Die App ist eine einzelne Datei, läuft offline und lädt nichts aus dem Internet. Alle Daten bleiben auf dem Gerät.
+Die App ist eine einzelne Datei (`index.html`). Sie lädt nichts aus dem Internet nach, und alle Übungsdaten bleiben auf dem Gerät.
 
-Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bildschirm“. Dann läuft sie wie eine App, und Safari löscht die gespeicherten Daten nicht nach einigen Tagen.
+### Empfohlen: über GitHub Pages (für iPads)
+
+1. Auf GitHub im Repository **Settings → Pages** öffnen.
+2. Unter „Build and deployment“ bei **Source** „Deploy from a branch“ wählen, dann Branch **main** und Ordner **/ (root)** → **Save**.
+3. Nach ein bis zwei Minuten läuft die App unter **https://bildungshexe.github.io/schrift/**.
+4. Auf dem iPad diese Adresse in Safari öffnen → „Teilen“ → „Zum Home-Bildschirm“. Danach startet sie wie eine App und funktioniert auch ohne Internet weiter, solange Safari die Seite im Speicher hat.
+
+Wichtig:
+- Immer **dieselbe Adresse** verwenden. Jede Adresse hat ihren eigenen Speicher; unter einer anderen Adresse sieht man die bisherigen Daten nicht.
+- Die Seite selbst ist öffentlich, die Übungsdaten nicht: Sie liegen nur im Browser des jeweiligen Geräts.
+- Bei einem privaten Repository braucht GitHub Pages ein kostenpflichtiges GitHub-Konto (Pro, Team oder Enterprise).
+
+### Ohne Internet-Adresse
+
+`index.html` am Computer im Browser öffnen (Doppelklick). Auf dem iPad funktioniert das Öffnen aus der Dateien-App meist nicht zuverlässig, dort GitHub Pages nutzen.
 
 ## Funktionen
 
@@ -27,6 +41,7 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
   - Bewegungsablauf: mit selbst vorgeschriebener Vorlage genau (Strichfolge und Richtung), bei den eingebauten Schriften nach Grundregeln (Rundungen gegen den Uhrzeigersinn, Abstriche von oben nach unten, von links nach rechts)
 
   Die Strenge (mild, normal, streng) ist unter „Nutzer & Daten“ einstellbar.
+- **Einfache Auswertung für Kinder:** Gesamtwert, Vergleichsbild und höchstens zwei Schwerpunkte; alle Werte lassen sich für Erwachsene aufklappen. Die Lehrkraft wählt unter „Daten“ pro Kind bis zu zwei Schwerpunkte (z. B. Grundlinie und Flüssigkeit) oder schaltet die ausführliche Ansicht ein.
 - **Spurhilfe ehrlich bewertet:** Nachspuren bringt nur wenige Tropfen und zählt nicht für den Fortschritt. In der Einstellung „automatisch“ verschwindet die Spurhilfe nach drei guten Versuchen je Buchstabe.
 - **Radierer:** einzelne Striche wegwischen; „Zurück“ nimmt den letzten Strich weg.
 - **Untergründe:** Papier (creme), weißes Blatt, kariertes Blatt (Kästchen 4/5/7/10 mm in echter Größe), Pergament, grüne Tafel und Schiefertafel (mit Kreide).
@@ -46,6 +61,7 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
 | `bilder/begleiter`, `bilder/welten` | freigestellte Originalbilder; Dateiname = Bild-Platz in der App |
 | `bilder/alternativen` | nicht verwendete Varianten |
 | `werkzeuge/` | Skripte zum Freistellen und Einbetten neuer Bilder |
+| `tests/` | automatische Browser-Tests (siehe unten) |
 
 ## Neue Bilder einbauen
 
@@ -55,6 +71,21 @@ python3 werkzeuge/bilder_einbetten.py
 ```
 
 Hintergründe (`welt_*_hintergrund`) nicht freistellen, sondern als JPEG (ca. 1280 px breit) nach `bilder/welten/` legen. Bilder lassen sich auch ohne Programmierung in der App unter „Meine Welt → Bilder“ laden.
+
+## Tests
+
+Nach jeder Änderung prüfen 20 automatische Tests die App im Browser: Auswertung, Bewegungsablauf, Spurhilfe, Kinderansicht, Einstellungen pro Kind, Speicher, Radierer, Untergründe, Heft-Modus, Begleiter, Welten und Baum. Bei jedem Hochladen auf GitHub laufen sie automatisch (Reiter **Actions**; ein grüner Haken heißt bestanden).
+
+Selbst ausführen (Node.js nötig):
+
+```bash
+npm install
+npx playwright install chromium
+npm test                                # alle Tests
+node tests/alle_tests.js kinderansicht  # nur ein Test
+```
+
+Bildschirmfotos der Tests landen in `tests/ausgabe/`.
 
 ## Lizenzen
 

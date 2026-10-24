@@ -1,0 +1,17 @@
+const { chromium } = require('playwright');
+(async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1180, height: 820 } });
+const errs=[]; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
+await p.goto('file://' + process.argv[2]); await p.waitForTimeout(1500);
+await p.evaluate(() => { getActiveUser().pet = { type: 'drache', name: '' }; saveState(); renderPet(); petSay && petSay('Los geht’s!'); });
+const info = async (tag) => console.log(tag, await p.evaluate(() => { const r = q => document.querySelector(q).getBoundingClientRect(); const pet = r('#pet'), st = r('#modelStrip'), pn = r('.studio-panel'), pad = r('#padHolder');
+  return `Begleiter x=${Math.round(pet.left)} (Vorlage ${Math.round(st.left)}–${Math.round(st.right)}) · Leiste ${Math.round(pn.left)}–${Math.round(pn.right)} · Feld ${Math.round(pad.left)}–${Math.round(pad.right)} · Knopf „${document.getElementById('panelToggle').textContent}“ · Klassen ${document.body.className}`; }));
+await info('rechts:'); await p.screenshot({ path: 'v_rechts.png' });
+await p.click('#panelToggle'); await p.waitForTimeout(120); await info('gleitet:'); await p.screenshot({ path: 'v_gleitet.png' });
+await p.waitForTimeout(300); await info('zu:'); await p.screenshot({ path: 'v_zu.png' });
+await p.click('#panelToggle'); await p.waitForTimeout(400); await info('auf:');
+await p.evaluate(() => document.querySelector('#handSeg [data-hand=left]').click());
+await p.waitForTimeout(200); await info('links-H:'); await p.screenshot({ path: 'v_links.png' });
+await p.click('#panelToggle'); await p.waitForTimeout(450); await info('links zu:'); await p.screenshot({ path: 'v_links_zu.png' });
+await p.click('#panelToggle'); await p.waitForTimeout(400);
+await p.evaluate(() => { document.getElementById('settingsCard').open = true; }); await p.selectOption('#panelSide', 'left'); await p.waitForTimeout(200); await info('Linksh., Leiste links:');
+console.log('ERR', errs); await b.close(); })();

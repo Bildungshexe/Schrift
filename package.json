@@ -1,0 +1,11 @@
+{
+  "name": "schreibflow",
+  "private": true,
+  "description": "Mix-&-Match-Handschrift-Trainer – nur für die Tests nötig, die App selbst ist index.html",
+  "scripts": {
+    "test": "node tests/alle_tests.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
