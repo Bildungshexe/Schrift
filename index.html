@@ -355,11 +355,31 @@
               </label>
               <div class="pen-ind hidden" id="penIndicator">✏️ Stift erkannt – Finger &amp; Handballen werden ignoriert.
                 <button class="chip" id="penResetBtn" type="button">zurücksetzen</button></div>
+              <button class="btn btn-block" id="heftBtn" type="button" style="margin-bottom:10px">📓 Wie im Heft (kleine Schrift, nur Grundlinie)</button>
               <label class="field"><span>Schriftgröße (Zeilen im Schreibfeld)</span>
                 <select class="input" id="rowsSelect">
                   <option value="1">Groß – 1 Zeile</option>
                   <option value="2">Mittel – 2 Zeilen</option>
                   <option value="3">Klein – 3 Zeilen</option>
+                  <option value="heft">Heft – Zeilenabstand wie im Schulheft</option>
+                </select>
+              </label>
+              <div id="heftOpts" class="hidden">
+                <label class="field"><span>Zeilenabstand (von Grundlinie zu Grundlinie)</span>
+                  <select class="input" id="heftMm">
+                    <option value="7">7 mm</option><option value="8">8 mm</option><option value="9">9 mm</option>
+                    <option value="10">10 mm</option><option value="12">12 mm</option>
+                  </select>
+                </label>
+                <p class="small muted" id="heftInfo"></p>
+                <button class="btn" id="calibBtnScreen" type="button">📏 Bildschirm vermessen</button>
+              </div>
+              <label class="field"><span>Linien</span>
+                <select class="input" id="guidesSelect">
+                  <option value="3">alle Linien (Ober-, Mittel-, Grund- und Unterlinie)</option>
+                  <option value="2">Grundlinie + Mittellinie + Oberlinie</option>
+                  <option value="1">Grundlinie + Mittellinie</option>
+                  <option value="0">nur Grundlinie (wie im linierten Heft)</option>
                 </select>
               </label>
               <label class="field"><span>Lineatur: Ober- und Unterband im Verhältnis zum Mittelband</span>
@@ -534,7 +554,9 @@
           <label class="field"><span>Wörter (leer = automatisch passende Wörter)</span><input class="input" id="wsWords" placeholder="automatisch" autocomplete="off"></label>
           <div class="grid2" style="gap:8px">
             <label class="field"><span>Mittelband-Höhe</span>
-              <select class="input" id="wsBand"><option value="4">4 mm</option><option value="5" selected>5 mm</option><option value="6">6 mm</option><option value="7">7 mm</option><option value="8">8 mm</option></select></label>
+              <select class="input" id="wsBand"><option value="2.5">2,5 mm (Heft)</option><option value="3">3 mm (Heft)</option><option value="3.5">3,5 mm</option><option value="4">4 mm</option><option value="5" selected>5 mm</option><option value="6">6 mm</option><option value="7">7 mm</option><option value="8">8 mm</option></select></label>
+            <label class="field"><span>Linien</span>
+              <select class="input" id="wsGuides"><option value="3">alle vier Linien</option><option value="2">Grund-, Mittel-, Oberlinie</option><option value="1">Grund- und Mittellinie</option><option value="0">nur Grundlinie</option></select></label>
             <label class="field"><span>Nachspur-Zeilen</span>
               <select class="input" id="wsSpur"><option>0</option><option>1</option><option selected>2</option><option>3</option></select></label>
             <label class="field"><span>Abschreib-Zeilen</span>
@@ -869,7 +891,7 @@ function defaultState() {
     version: 2, activeUserId: null, users: [], library: {}, lastWorksheet: null,
     backup: { lastAt: null, lastAutoDay: null },
     security: { enabled: false, autoLockMin: 0 },
-    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, ghost: true, penStyle: 'classic',
+    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, ghost: true, penStyle: 'classic',
       simPressure: 0.5, strokeWidth: 'mittel', lowLatency: true, strictness: 'normal', rowsByMode: { letter: 1, word: 2, free: 3 } }
   };
 }
@@ -910,6 +932,11 @@ function sanitizeState(raw) {
   if (!['auto', 'pen', 'touch'].includes(s.settings.inputMode)) s.settings.inputMode = 'auto';
   if (!['fein', 'mittel', 'kraeftig'].includes(s.settings.strokeWidth)) s.settings.strokeWidth = 'mittel';
   if (!['mild', 'normal', 'streng'].includes(s.settings.strictness)) s.settings.strictness = 'normal';
+  if (!['0', '1', '2', '3'].includes(String(s.settings.guides))) s.settings.guides = '3';
+  s.settings.guides = String(s.settings.guides);
+  s.settings.heftMm = clamp(num(Number(s.settings.heftMm), 9), 5, 15);
+  s.settings.mmPerPx = typeof s.settings.mmPerPx === 'number' && s.settings.mmPerPx > 0.05 && s.settings.mmPerPx < 1 ? s.settings.mmPerPx : null;
+  for (const k of Object.keys(s.settings.rowsByMode)) { const v = s.settings.rowsByMode[k]; if (v !== 'heft' && ![1, 2, 3].includes(v)) s.settings.rowsByMode[k] = 1; }
   s.settings.lowLatency = s.settings.lowLatency !== false;
   if (!VARIANTS.some(v => v.id === s.settings.defaultVariant)) s.settings.defaultVariant = 'va';
   s.settings.lineRatio = clamp(num(Number(s.settings.lineRatio), 1), 0.5, 1.2);
@@ -1153,20 +1180,29 @@ function featureText(f) {
    Logische Einheit = Höhe des Mittelbands (1,0). Dadurch sind alle Messwerte
    unabhängig von Bildschirmgröße und Pixeldichte.
    ========================================================================== */
-function lineCfg() { const r = appData.settings.lineRatio; return { asc: r, desc: r, gap: 0.7 }; }
+// Mit allen vier Linien braucht es Abstand zwischen den Zeilen; mit weniger Linien rücken die Zeilen zusammen wie im Heft
+function lineCfg() { const r = appData.settings.lineRatio; return { asc: r, desc: r, gap: appData.settings.guides === '3' ? 0.7 : 0.35 }; }
 function rowPitch(cfg = lineCfg()) { return cfg.asc + 1 + cfg.desc + cfg.gap; }
 function rowGeom(i, cfg = lineCfg()) {
   const P = rowPitch(cfg), top = i * P + cfg.gap / 2;
   return { i, top, mid: top + cfg.asc, base: top + cfg.asc + 1, bottom: top + cfg.asc + 1 + cfg.desc };
 }
-function drawRowLines(ctx, tf, row, x0, x1, st) {
-  const Y = v => tf.oy + v * tf.scale;
+// guides: Anzahl Hilfslinien zusätzlich zur Grundlinie (0 = nur Grundlinie, 1 = + Mittellinie, 2 = + Oberlinie, 3 = + Unterlinie)
+function drawRowLines(ctx, tf, row, x0, x1, st, guides = appData.settings.guides) {
+  const Y = v => tf.oy + v * tf.scale, g = Number(guides);
   ctx.save();
-  ctx.fillStyle = st.band; ctx.fillRect(x0, Y(row.mid), x1 - x0, Y(row.base) - Y(row.mid));
+  if (g >= 1) { ctx.fillStyle = st.band; ctx.fillRect(x0, Y(row.mid), x1 - x0, Y(row.base) - Y(row.mid)); }
   const line = (v, color, w) => { ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.moveTo(x0, Y(v)); ctx.lineTo(x1, Y(v)); ctx.stroke(); };
-  line(row.top, st.thin, st.w); line(row.mid, st.mid, st.w); line(row.base, st.base, st.wb); line(row.bottom, st.thin, st.w);
+  if (g >= 2) line(row.top, st.thin, st.w);
+  if (g >= 1) line(row.mid, st.mid, st.w);
+  line(row.base, st.base, st.wb);
+  if (g >= 3) line(row.bottom, st.thin, st.w);
   ctx.restore();
 }
+// Bildschirm: Millimeter pro CSS-Pixel. Ohne Vermessung ein Näherungswert (Tablets liegen meist bei 0,16–0,2 mm).
+const MM_PER_PX_GUESS = 0.19;
+function mmPerPx() { return appData.settings.mmPerPx || MM_PER_PX_GUESS; }
+function heftScale() { return appData.settings.heftMm / rowPitch() / mmPerPx(); } // Pixel pro Mittelband
 
 /* ==========================================================================
    5. VORLAGEN (Mix & Match) – Quelle je Buchstabe ermitteln und zeichnen
@@ -1354,7 +1390,7 @@ function drawInk(ctx, s, tf, from, finished) {
 
 class WritingPad {
   constructor(holder, opts = {}) {
-    this.holder = holder; this.opts = opts; this.rows = opts.rows || 1;
+    this.holder = holder; this.opts = opts; this.heft = opts.rows === 'heft'; this.rows = this.heft ? 1 : (opts.rows || 1);
     this.strokes = []; this.current = null; this.activeId = null;
     this.scale = 1; this.padX = 0; this.cssW = 0; this.cssH = 0;
     this.guide = el('canvas', { class: 'pad-layer' });
@@ -1388,7 +1424,8 @@ class WritingPad {
       c.style.width = w + 'px'; c.style.height = h + 'px';
     }
     this.cssW = w; this.cssH = h;
-    this.scale = h / (this.rows * rowPitch());
+    if (this.heft) { this.scale = heftScale(); this.rows = Math.max(1, Math.floor(h / (this.scale * rowPitch()))); }
+    else this.scale = h / (this.rows * rowPitch());
     this.padX = Math.min(this.scale * 0.3, 24);
     for (const c of [this.gctx, this.ictx, this.pctx]) c.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.redraw();
@@ -1406,7 +1443,7 @@ class WritingPad {
     for (const s of this.strokes) drawInk(c, s, this.tf, 0, true);
     if (this.current) { drawInk(c, this.current, this.tf, 0, false); this.current.drawn = this.current.pts.length; }
   }
-  setRows(n) { this.rows = n; this.clear(); this.layout(); }
+  setRows(n) { this.heft = n === 'heft'; if (!this.heft) this.rows = n; this.clear(); this.layout(); }
   clear() { this.strokes = []; this.current = null; this.activeId = null; this.redraw(); }
   undo() { this.strokes.pop(); this.redraw(); }
 
@@ -2186,10 +2223,27 @@ function initStudio() {
     s.lineRatio = Number(e.target.value); saveState(); pad.clear(); pad.layout(); renderStudio();
     if (recPad) { recPad.clear(); recPad.layout(); }
   });
+  const askClear = () => !pad.strokes.length || confirm('Das Schreibfeld wird dabei geleert. Fortfahren?');
+  const applyRows = v => { s.rowsByMode[studio.mode] = v; saveState(); pad.setRows(v); studio.evaluated = false; renderStudio(); };
   $('rowsSelect').addEventListener('change', e => {
-    if (pad.strokes.length && !confirm('Das Schreibfeld wird dabei geleert. Fortfahren?')) { e.target.value = String(pad.rows); return; }
-    s.rowsByMode[studio.mode] = Number(e.target.value); saveState(); pad.setRows(Number(e.target.value)); studio.evaluated = false;
+    if (!askClear()) { e.target.value = String(s.rowsByMode[studio.mode]); return; }
+    applyRows(e.target.value === 'heft' ? 'heft' : Number(e.target.value));
   });
+  $('guidesSelect').value = s.guides;
+  $('guidesSelect').addEventListener('change', e => {
+    if (!askClear()) { e.target.value = s.guides; return; }
+    s.guides = e.target.value; saveState(); pad.clear(); pad.layout(); renderStudio();
+    if (recPad) { recPad.clear(); recPad.layout(); }
+  });
+  $('heftMm').value = String(s.heftMm);
+  $('heftMm').addEventListener('change', e => { if (!askClear()) { e.target.value = String(s.heftMm); return; } s.heftMm = Number(e.target.value); saveState(); pad.clear(); pad.layout(); renderStudio(); });
+  $('heftBtn').addEventListener('click', () => {
+    if (!askClear()) return;
+    s.guides = '0'; $('guidesSelect').value = '0';
+    applyRows('heft');
+    toast('Heft-Modus: kleine Schrift mit Zeilenabstand ' + s.heftMm + ' mm. Hilfslinien kannst du unter „Linien“ zuschalten.', 4500);
+  });
+  $('calibBtnScreen').addEventListener('click', calibrateScreen);
   $('strokeWidthSel').value = s.strokeWidth;
   $('strokeWidthSel').addEventListener('change', e => { s.strokeWidth = e.target.value; saveState(); pad.redraw(); if (recPad) recPad.redraw(); });
   $('lowLatencyToggle').checked = !!s.lowLatency;
@@ -2207,6 +2261,22 @@ function initStudio() {
   updatePenIndicator();
 }
 
+// Ein Balken mit fester Pixellänge wird mit dem Lineal gemessen → Millimeter pro Pixel
+function calibrateScreen() {
+  const LEN = 300, input = el('input', { class: 'input', type: 'number', min: '20', max: '200', step: '0.5', placeholder: 'z. B. 57', inputmode: 'decimal' });
+  if (appData.settings.mmPerPx) input.value = String(Math.round(appData.settings.mmPerPx * LEN * 2) / 2);
+  showModal('📏 Bildschirm vermessen', [
+    el('p', { text: 'Lege ein Lineal an den schwarzen Balken und miss seine Länge.' }),
+    el('div', { style: `width:${LEN}px; height:24px; background:#000; border:2px solid #fbbf24; margin:12px 0; max-width:none` }),
+    el('label', { class: 'field' }, el('span', { text: 'Länge des Balkens in Millimetern' }), input),
+    el('p', { class: 'small muted', text: 'Gilt nur für dieses Gerät. Wird die Ansicht im Browser gezoomt, stimmt die Messung nicht mehr.' })
+  ], 'Speichern', () => {
+    const mm = Number(String(input.value).replace(',', '.'));
+    if (!(mm >= 20 && mm <= 200)) { toast('Bitte eine Länge zwischen 20 und 200 mm eingeben.'); return; }
+    appData.settings.mmPerPx = mm / LEN; saveState(); pad.clear(); pad.layout(); renderStudio();
+    toast(`Gespeichert: 1 Pixel ≈ ${fmt(mm / LEN, 3)} mm.`);
+  });
+}
 function updatePenIndicator() {
   $('penIndicator').classList.toggle('hidden', !(penSeen && appData.settings.inputMode === 'auto'));
 }
@@ -2298,6 +2368,10 @@ function renderStudio() {
   $('wordCard').classList.toggle('hidden', studio.mode !== 'word');
   $('freeCard').classList.toggle('hidden', studio.mode !== 'free');
   $('rowsSelect').value = String(appData.settings.rowsByMode[studio.mode]);
+  $('guidesSelect').value = appData.settings.guides;
+  const heft = appData.settings.rowsByMode[studio.mode] === 'heft';
+  $('heftOpts').classList.toggle('hidden', !heft);
+  if (heft) $('heftInfo').textContent = (appData.settings.mmPerPx ? 'Bildschirm vermessen – die Zeilen sind so hoch wie eingestellt. ' : 'Noch nicht vermessen – die Größe ist ein Näherungswert. ') + `Im Schreibfeld: ${pad ? pad.rows : '–'} Zeilen.`;
   $('curLetter').textContent = studio.letter;
   $('wordLetter').textContent = studio.letter;
 
@@ -2728,7 +2802,7 @@ function buildWorksheet() {
   const u = getActiveUser();
   let letters = parseLetters($('wsLetters').value);
   if (!letters.length) letters = [studio.letter];
-  const band = Number($('wsBand').value), cfg = lineCfg();
+  const band = Number($('wsBand').value), cfg = lineCfg(), guides = $('wsGuides').value;
   const nSpur = Number($('wsSpur').value), nMuster = Number($('wsMuster').value), nFrei = Number($('wsFrei').value);
   let words = $('wsWords').value.split(/[,;]+/).map(w => w.trim()).filter(w => /^[A-Za-zÄÖÜäöüß\- ]{1,30}$/.test(w));
 
@@ -2756,7 +2830,9 @@ function buildWorksheet() {
   ctx.fillText('Mix & Match: Schreibe sauber, gut lesbar und mit lockerer Hand.', 18 * K, 42 * K);
 
   // Zeilen
-  const rowH = (cfg.asc + 1 + cfg.desc) * band, gap = Math.max(6, band * 1.1), pitch = rowH + gap;
+  // Mit allen vier Linien Abstand zwischen den Zeilen; sonst enger wie im Heft (Zeilenabstand = Grundlinie zu Grundlinie)
+  const rowH = (cfg.asc + 1 + cfg.desc) * band, gap = guides === '3' ? Math.max(6, band * 1.1) : band * 0.35, pitch = rowH + gap;
+  const withLabels = gap >= 4.5;
   const top0 = 52, bottomLimit = 274, x0 = 16, x1 = 194;
   const n = Math.max(1, Math.floor((bottomLimit - top0 + gap) / pitch));
   const widthU = (x1 - x0) / band;
@@ -2776,13 +2852,13 @@ function buildWorksheet() {
   let lastType = null;
   plan.forEach((p, i) => {
     const yTop = top0 + i * pitch;
-    if (p.type !== lastType) {
+    if (p.type !== lastType && withLabels) {
       ctx.fillStyle = '#333'; ctx.font = `${11 * PT}px ${SYS_SANS}`;
       ctx.fillText(labels[p.type], x0 * K, (yTop - 1.2) * K);
       lastType = p.type;
     }
     const tf = { scale: band * K, ox: x0 * K, oy: yTop * K };
-    drawRowLines(ctx, tf, row, x0 * K, x1 * K, LINE_PRINT);
+    drawRowLines(ctx, tf, row, x0 * K, x1 * K, LINE_PRINT, guides);
     const lw = Math.max(2, band * K * 0.075);
     if (p.type === 'spur') {
       let x = 0.4, guard = 0;
@@ -2794,9 +2870,15 @@ function buildWorksheet() {
     }
   });
   ctx.fillStyle = '#555'; ctx.font = `${11 * PT}px ${SYS_SANS}`; ctx.textAlign = 'center';
-  ctx.fillText(`SchreibFlow · Mittelband ${band} mm · ${u.name}`, 105 * K, 280 * K);
+  ctx.fillText(`SchreibFlow · Mittelband ${fmt(band, 1)} mm · Zeilenabstand ${fmt(pitch, 1)} mm · ${u.name}`, 105 * K, 280 * K);
+  if (!withLabels) { // zu eng für Abschnittsnamen über den Zeilen → Reihenfolge im Kopf angeben
+    const cnt = t => plan.filter(q => q.type === t).length, parts = [];
+    if (cnt('spur')) parts.push(`${cnt('spur')} Nachspuren`); if (cnt('muster')) parts.push(`${cnt('muster')} Abschreiben`);
+    if (cnt('wort')) parts.push(`${cnt('wort')} Wörter`); if (cnt('frei')) parts.push(`${cnt('frei')} frei`);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#333'; ctx.fillText('Zeilen von oben: ' + parts.join(' · '), 18 * K, 48.5 * K);
+  }
 
-  appData.lastWorksheet = { band, asc: cfg.asc, desc: cfg.desc, top0, pitch, n, x0, x1, created: Date.now() };
+  appData.lastWorksheet = { band, asc: cfg.asc, desc: cfg.desc, top0, pitch, n, x0, x1, guides, created: Date.now() };
   saveState();
   return cv;
 }
@@ -2896,7 +2978,9 @@ function paintRectified() {
     ctx.strokeStyle = 'rgba(220,38,38,0.6)'; ctx.lineWidth = 1.5;
     for (let r = 0; r < L.n; r++) {
       const y0 = L.top0 + r * L.pitch;
-      for (const off of [0, L.asc * L.band, (L.asc + 1) * L.band, (L.asc + 1 + L.desc) * L.band]) {
+      const g = Number(L.guides ?? 3), offs = [(L.asc + 1) * L.band];
+      if (g >= 1) offs.push(L.asc * L.band); if (g >= 2) offs.push(0); if (g >= 3) offs.push((L.asc + 1 + L.desc) * L.band);
+      for (const off of offs) {
         ctx.beginPath(); ctx.moveTo(L.x0 * S, (y0 + off) * S); ctx.lineTo(L.x1 * S, (y0 + off) * S); ctx.stroke();
       }
     }
@@ -3863,6 +3947,7 @@ function switchTab(id) {
   if (id === 'users') { renderUsers(); renderSnapshots(); renderSecurity(); }
   if (id === 'world') { renderWorldTab(); renderImagePanel(); }
   if (id === 'paper' && !$('wsLetters').dataset.touched) $('wsLetters').value = studio.letter;
+  if (id === 'paper' && !$('wsGuides').dataset.touched) $('wsGuides').value = appData.settings.guides;
 }
 function refreshAll() {
   updateUserUI();
@@ -3887,6 +3972,7 @@ function init() {
     u.history = []; u.letterStats = {}; u.variantStats = {}; u.samples = {}; saveState(); renderStats();
   });
   $('wsLetters').addEventListener('input', e => { e.target.dataset.touched = '1'; });
+  $('wsGuides').addEventListener('change', e => { e.target.dataset.touched = '1'; });
   $('wsPreviewBtn').addEventListener('click', () => showWorksheet(false));
   $('wsPrintBtn').addEventListener('click', () => showWorksheet(true));
   $('photoCam').addEventListener('change', e => { loadPhoto(e.target.files[0]); e.target.value = ''; });
