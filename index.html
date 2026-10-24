@@ -48,25 +48,28 @@
     #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
 
     /* Kopfzeile */
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
+    .topbar { display: flex; align-items: center; gap: 10px; flex: none;
+      padding: 5px 12px; padding-top: max(5px, env(safe-area-inset-top));
       background: var(--panel); border-bottom: 1px solid var(--line); }
-    .brand { display: flex; align-items: center; gap: 10px; }
-    .logo { width: 40px; height: 40px; border-radius: 12px; background: var(--accent); display: grid; place-items: center; font-size: 20px; }
-    .brand-name { font-weight: 800; font-size: 18px; }
-    .brand-sub { font-size: 13px; color: var(--accent2); }
-    .user-badge { display: flex; align-items: center; gap: 10px; background: #334155; border: 1px solid #475569; border-radius: 12px; padding: 6px 12px; text-align: left; }
-    .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; flex: none; }
-    .ub-name { font-weight: 600; font-size: 14px; display: block; }
-    .ub-meta { font-size: 13px; color: #fcd34d; display: block; }
+    .brand { display: flex; align-items: center; gap: 8px; flex: none; }
+    .logo { width: 32px; height: 32px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; font-size: 17px; }
+    .brand-name { font-weight: 800; font-size: 16px; }
+    .user-badge { display: flex; align-items: center; gap: 8px; background: #334155; border: 1px solid #475569; border-radius: 12px; padding: 3px 10px 3px 4px; text-align: left; min-height: 40px; }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; flex: none; }
+    .ub-name { font-weight: 600; font-size: 13px; display: block; white-space: nowrap; }
+    .ub-meta { font-size: 12px; color: #fcd34d; display: block; white-space: nowrap; }
+    .due-dot { position: absolute; top: 4px; right: 4px; width: 11px; height: 11px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--panel); }
+    #backupBtn { position: relative; }
+    @media (max-width: 1250px) { .brand-name { display: none; } }
+    @media (max-width: 1080px) { .tab .tab-t { display: none; } .tab { padding: 6px 12px; font-size: 18px; } }
     .lvl { font-size: 12px; background: rgba(99,102,241,.25); color: var(--accent2); border-radius: 999px; padding: 1px 8px; margin-left: 4px; }
 
     /* Tabs */
-    .tabs { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; background: rgba(30,41,59,.6); border-bottom: 1px solid var(--line); flex: none; }
-    .tab { white-space: nowrap; border: 0; background: transparent; color: var(--muted); padding: 10px 14px; border-radius: 10px; min-height: 44px; font-weight: 600; }
+    .tabs { display: flex; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; }
+    .tab { white-space: nowrap; border: 0; background: transparent; color: var(--muted); padding: 6px 10px; border-radius: 10px; min-height: 40px; font-weight: 600; font-size: 14px; }
     .tab.active { background: var(--accent); color: #fff; }
 
-    main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+    main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
     .view { display: none; }
     .view.active { display: block; }
 
@@ -115,17 +118,31 @@
     .letter-grid button .badge { position: absolute; right: 2px; bottom: 1px; font-size: 10px; color: var(--muted); font-weight: 600; }
     .letter-grid button.nomodel .badge { color: var(--warn); }
 
-    .model-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-    .strip { width: 100%; height: 96px; display: block; border-radius: 12px; background: var(--paper); }
+    .model-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+    .model-head .chip { min-height: 34px; padding: 4px 10px; font-size: 13px; }
+    .model-label { flex: 1; min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .work-card { padding: 8px; }
+    .strip-wrap { position: relative; }
+    .strip { width: 100%; height: 72px; display: block; border-radius: 12px; background: var(--paper); }
+    .strip-wrap .pet-box { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); margin: 0; pointer-events: none; }
+    .strip-wrap .pet, .strip-wrap .pet-bubble { pointer-events: auto; }
+    .strip-wrap .pet, .strip-wrap .pet.has-img, .strip-wrap .pet img, .strip-wrap .pet.has-img img { width: 66px; height: 66px; }
+    .strip-wrap .pet-emoji { font-size: 40px; }
+    .strip-wrap .pet-bubble { right: 70px; }
     .warn { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.4); color: #fde68a; border-radius: 10px; padding: 8px 10px; font-size: 14px; margin-top: 6px; }
-    .live { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; font-size: 14px; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 8px 0; }
+    .live { display: inline-flex; gap: 12px; align-items: center; font-size: 13px; color: var(--muted); white-space: nowrap; }
+    .live b { color: var(--text); }
     .live b { font-variant-numeric: tabular-nums; }
-    .pad-holder { position: relative; width: 100%; height: clamp(300px, 56vh, 640px); background: var(--paper); border-radius: 14px; overflow: hidden;
+    .pad-holder { position: relative; width: 100%; margin-top: 6px; height: clamp(300px, calc(100vh - 250px), 1100px); height: clamp(300px, calc(100dvh - 250px), 1100px); background: var(--paper); border-radius: 14px; overflow: hidden;
       touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; border: 1px solid var(--line); }
     .pad-holder.small { height: 230px; }
     .pad-layer { position: absolute; left: 0; top: 0; touch-action: none; }
     .pad-ink { cursor: crosshair; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 8px; margin-top: 8px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 8px; margin-top: 6px; }
+    .actions .btn { min-height: 42px; }
+    /* Leiste weggeklappt: Schreibfeld über die ganze Breite */
+    body.panel-off .studio, body.panel-off.lefty .studio { grid-template-columns: 1fr; }
+    body.panel-off .studio-panel { display: none; }
     .pen-ind { font-size: 13px; color: #6ee7b7; }
 
     /* Ergebnis */
@@ -183,9 +200,9 @@
 
     /* Kopfzeile: Baum, Sichern, Sperre */
     .top-actions { display: flex; align-items: center; gap: 8px; }
-    .mini-tree { width: 64px; height: 54px; border-radius: 10px; cursor: pointer; border: 1px solid #475569; display: block; }
+    .mini-tree { width: 48px; height: 40px; border-radius: 9px; cursor: pointer; border: 1px solid #475569; display: block; }
     .btn.small-btn { min-height: 40px; padding: 6px 10px; }
-    @media (max-width: 760px) { .brand-sub, .hide-sm { display: none; } .brand-name { font-size: 16px; } }
+    @media (max-width: 760px) { .hide-sm, .ub-meta { display: none; } }
     .banner { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 6px 16px; background: rgba(245,158,11,.15);
       border-bottom: 1px solid rgba(245,158,11,.4); color: #fde68a; font-size: 14px; flex: none; }
     /* Begleiter */
@@ -252,36 +269,31 @@
 <body>
 <div id="app">
   <header class="topbar">
-    <div class="brand">
+    <div class="brand" title="SchreibFlow – Mix &amp; Match Handschrift-Training">
       <div class="logo" aria-hidden="true">✒️</div>
-      <div>
-        <div class="brand-name">SchreibFlow</div>
-        <div class="brand-sub">Mix &amp; Match Handschrift-Training</div>
-      </div>
+      <div class="brand-name">SchreibFlow</div>
     </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="draw" type="button">✍️ <span class="tab-t">Schreib-Studio</span></button>
+      <button class="tab" data-tab="world" type="button">🌍 <span class="tab-t">Meine Welt</span></button>
+      <button class="tab" data-tab="alphabet" type="button">🔤 <span class="tab-t">Meine Schrift</span></button>
+      <button class="tab" data-tab="stats" type="button">📈 <span class="tab-t">Fortschritt</span></button>
+      <button class="tab" data-tab="paper" type="button">🖨️ <span class="tab-t">Papier</span></button>
+      <button class="tab" data-tab="users" type="button">👥 <span class="tab-t">Daten</span></button>
+    </nav>
     <div class="top-actions">
-    <canvas id="miniTree" class="mini-tree" role="button" aria-label="Mein Schreibbaum – antippen zum Vergrößern"></canvas>
-    <button id="backupBtn" class="btn small-btn" type="button" title="Jetzt sichern">💾 <span class="hide-sm">Sichern</span></button>
-    <button id="lockBtn" class="btn small-btn hidden" type="button" title="App sperren">🔒</button>
-    <button id="userBadge" class="user-badge" type="button" title="Nutzer &amp; Daten">
-      <span class="avatar" id="userAvatar">S</span>
-      <span>
-        <span class="ub-name"><span id="userNameDisplay">Schreiber</span><span class="lvl" id="userLevelDisplay">Lvl 1</span></span>
-        <span class="ub-meta">💧 <span id="userPointsDisplay">0</span> Tropfen · 🔥 <span id="userStreakDisplay">0</span> Tage</span>
-      </span>
-    </button>
+      <canvas id="miniTree" class="mini-tree" role="button" aria-label="Mein Schreibbaum – antippen zum Vergrößern"></canvas>
+      <button id="backupBtn" class="btn small-btn" type="button" title="Jetzt sichern">💾<span class="due-dot hidden" id="backupDot"></span></button>
+      <button id="lockBtn" class="btn small-btn hidden" type="button" title="App sperren">🔒</button>
+      <button id="userBadge" class="user-badge" type="button" title="Nutzer &amp; Daten">
+        <span class="avatar" id="userAvatar">S</span>
+        <span>
+          <span class="ub-name"><span id="userNameDisplay">Schreiber</span><span class="lvl" id="userLevelDisplay">Lvl 1</span></span>
+          <span class="ub-meta">💧 <span id="userPointsDisplay">0</span> · 🔥 <span id="userStreakDisplay">0</span></span>
+        </span>
+      </button>
     </div>
   </header>
-
-  <nav class="tabs" role="tablist">
-    <button class="tab active" data-tab="draw" type="button">✍️ Schreib-Studio</button>
-    <button class="tab" data-tab="world" type="button">🌍 Meine Welt</button>
-    <button class="tab" data-tab="alphabet" type="button">🔤 Meine Schrift</button>
-    <button class="tab" data-tab="stats" type="button">📈 Fortschritt</button>
-    <button class="tab" data-tab="paper" type="button">🖨️ Papier &amp; Foto</button>
-    <button class="tab" data-tab="users" type="button">👥 Nutzer &amp; Daten</button>
-  </nav>
-  <div id="backupBanner" class="banner hidden" role="status"></div>
 
   <main id="main">
     <!-- ================= SCHREIB-STUDIO ================= -->
@@ -367,6 +379,7 @@
               <div id="heftOpts" class="hidden">
                 <label class="field"><span>Zeilenabstand (von Grundlinie zu Grundlinie)</span>
                   <select class="input" id="heftMm">
+                    <option value="3.5">3,5 mm (sehr klein)</option><option value="4">4 mm (sehr klein)</option><option value="5">5 mm</option><option value="6">6 mm</option>
                     <option value="7">7 mm</option><option value="8">8 mm</option><option value="9">9 mm</option>
                     <option value="10">10 mm</option><option value="12">12 mm</option>
                   </select>
@@ -415,20 +428,22 @@
         </aside>
 
         <div class="studio-work">
-          <div class="card" style="padding:10px">
+          <div class="card work-card">
             <div class="model-head">
-              <span class="small" id="modelLabel">Vorlage</span>
-              <button class="chip" id="playMotionBtn" type="button">▶ Bewegung zeigen</button>
+              <button class="chip" id="panelToggle" type="button" title="Leiste ein- oder ausblenden">◀ Leiste</button>
+              <span class="small model-label" id="modelLabel">Vorlage</span>
+              <span class="live">
+                <span>Druck <b id="livePressure">–</b></span>
+                <span title="Mittelbänder pro Sekunde">Tempo <b id="liveSpeed">–</b></span>
+                <span id="liveWarning" class="hidden" style="color:#fbbf24">⚠️ Druck hoch</span>
+              </span>
+              <button class="chip" id="playMotionBtn" type="button">▶ Bewegung</button>
             </div>
-            <canvas id="modelStrip" class="strip" aria-label="Vorlage"></canvas>
-            <div id="modelWarn" class="warn hidden"></div>
-
-            <div class="live">
-              <span>Druck: <b id="livePressure">–</b></span>
-              <span>Tempo: <b id="liveSpeed">–</b> <span class="small muted">Mittelbänder/s</span></span>
-              <span id="liveWarning" class="hidden" style="color:#fbbf24">⚠️ Druck hoch – Hand locker lassen</span>
+            <div class="strip-wrap">
+              <canvas id="modelStrip" class="strip" aria-label="Vorlage"></canvas>
               <div class="pet-box"><span class="pet-bubble hidden" id="petBubble"></span><div class="pet" id="pet" role="button" aria-label="Begleiter"></div></div>
             </div>
+            <div id="modelWarn" class="warn hidden"></div>
 
             <div id="padHolder" class="pad-holder" aria-label="Schreibfeld"></div>
 
@@ -554,7 +569,7 @@
           <label class="field"><span>Wörter (leer = automatisch passende Wörter)</span><input class="input" id="wsWords" placeholder="automatisch" autocomplete="off"></label>
           <div class="grid2" style="gap:8px">
             <label class="field"><span>Mittelband-Höhe</span>
-              <select class="input" id="wsBand"><option value="2.5">2,5 mm (Heft)</option><option value="3">3 mm (Heft)</option><option value="3.5">3,5 mm</option><option value="4">4 mm</option><option value="5" selected>5 mm</option><option value="6">6 mm</option><option value="7">7 mm</option><option value="8">8 mm</option></select></label>
+              <select class="input" id="wsBand"><option value="1.5">1,5 mm (sehr klein)</option><option value="2">2 mm (sehr klein)</option><option value="2.5">2,5 mm (Heft)</option><option value="3">3 mm (Heft)</option><option value="3.5">3,5 mm</option><option value="4">4 mm</option><option value="5" selected>5 mm</option><option value="6">6 mm</option><option value="7">7 mm</option><option value="8">8 mm</option></select></label>
             <label class="field"><span>Linien</span>
               <select class="input" id="wsGuides"><option value="3">alle vier Linien</option><option value="2">Grund-, Mittel-, Oberlinie</option><option value="1">Grund- und Mittellinie</option><option value="0">nur Grundlinie</option></select></label>
             <label class="field"><span>Nachspur-Zeilen</span>
@@ -891,7 +906,7 @@ function defaultState() {
     version: 2, activeUserId: null, users: [], library: {}, lastWorksheet: null,
     backup: { lastAt: null, lastAutoDay: null },
     security: { enabled: false, autoLockMin: 0 },
-    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, ghost: true, penStyle: 'classic',
+    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, panelOff: false, ghost: true, penStyle: 'classic',
       simPressure: 0.5, strokeWidth: 'mittel', lowLatency: true, strictness: 'normal', rowsByMode: { letter: 1, word: 2, free: 3 } }
   };
 }
@@ -934,7 +949,8 @@ function sanitizeState(raw) {
   if (!['mild', 'normal', 'streng'].includes(s.settings.strictness)) s.settings.strictness = 'normal';
   if (!['0', '1', '2', '3'].includes(String(s.settings.guides))) s.settings.guides = '3';
   s.settings.guides = String(s.settings.guides);
-  s.settings.heftMm = clamp(num(Number(s.settings.heftMm), 9), 5, 15);
+  s.settings.heftMm = clamp(num(Number(s.settings.heftMm), 9), 3, 15);
+  s.settings.panelOff = s.settings.panelOff === true;
   s.settings.mmPerPx = typeof s.settings.mmPerPx === 'number' && s.settings.mmPerPx > 0.05 && s.settings.mmPerPx < 1 ? s.settings.mmPerPx : null;
   for (const k of Object.keys(s.settings.rowsByMode)) { const v = s.settings.rowsByMode[k]; if (v !== 'heft' && ![1, 2, 3].includes(v)) s.settings.rowsByMode[k] = 1; }
   s.settings.lowLatency = s.settings.lowLatency !== false;
@@ -1948,7 +1964,9 @@ function analyzeAttempt(strokes, c) {
   }
 
   // ---------- Strichqualität ----------
-  const tr = tremorOf(main);
+  // Bei sehr kleiner Schrift ist ein Bildschirmpixel ein großer Teil des Mittelbands: dessen Rasterung (≈ 0,3 px) herausrechnen
+  const quant = c.pxPerBand ? 0.3 / c.pxPerBand : 0, tr0 = tremorOf(main);
+  const tr = tr0 == null ? null : Math.sqrt(Math.max(0, tr0 * tr0 - quant * quant));
   // gemessen: glatte Linie ≈ 0,03 %, leichtes Zittern (±0,01) ≈ 0,6 %, deutliches Zittern (±0,04) ≈ 2,2 %
   if (tr != null) add('tremor', 'Ruhige Linie (kein Zittern)', 100 - (tr - 0.0025) / 0.0125 * 100, `Zitter-Abweichung Ø ${fmt(tr * 100, 1)} % der Mittelband-Höhe`, tr > 0.007 ? TIPS.tremor : null);
   const srcV = c.src ? c.src.v : null;
@@ -2237,6 +2255,13 @@ function initStudio() {
   });
   $('heftMm').value = String(s.heftMm);
   $('heftMm').addEventListener('change', e => { if (!askClear()) { e.target.value = String(s.heftMm); return; } s.heftMm = Number(e.target.value); saveState(); pad.clear(); pad.layout(); renderStudio(); });
+  const applyPanel = () => {
+    document.body.classList.toggle('panel-off', !!s.panelOff);
+    $('panelToggle').textContent = s.panelOff ? '☰ Leiste' : '⇤ Leiste';
+    $('panelToggle').title = s.panelOff ? 'Leiste einblenden' : 'Leiste ausblenden – mehr Platz zum Schreiben';
+  };
+  $('panelToggle').addEventListener('click', () => { s.panelOff = !s.panelOff; saveState(); applyPanel(); });
+  applyPanel();
   $('heftBtn').addEventListener('click', () => {
     if (!askClear()) return;
     s.guides = '0'; $('guidesSelect').value = '0';
@@ -2455,7 +2480,7 @@ function evaluateAttempt() {
   if (studio.evaluated) { toast('Dieser Versuch ist schon ausgewertet. Schreib einfach weiter – das Feld leert sich dann.'); return; }
   const user = getActiveUser();
   const src = studio.mode === 'letter' ? modelSource(studio.letter, studio.trialVariant) : null;
-  const res = analyzeAttempt(pad.strokes, { mode: studio.mode, letter: studio.letter, word: studio.word, rows: pad.rows, user, src, variantFor: studioVariantFor });
+  const res = analyzeAttempt(pad.strokes, { mode: studio.mode, letter: studio.letter, word: studio.word, rows: pad.rows, user, src, variantFor: studioVariantFor, pxPerBand: pad.scale });
   if (res.score == null) { toast('Zu wenig geschrieben für eine Auswertung – schreibe etwas mehr.'); return; }
   studio.evaluated = true;
   const reaction = petReaction(res);
@@ -3155,13 +3180,14 @@ async function autoSnapshot() {
   if (await addSnapshot('automatisch (Tagesbeginn)')) { appData.backup.lastAutoDay = dayKey(); saveState(); }
 }
 function daysSinceBackup() { return appData.backup.lastAt ? Math.floor((Date.now() - appData.backup.lastAt) / DAY_MS) : null; }
+// Erinnerung als roter Punkt am Sichern-Knopf (spart eine ganze Zeile); einmal pro Start zusätzlich als Hinweis
+let backupHintShown = false;
 function updateBackupBanner() {
   const d = daysSinceBackup(), hasData = appData.users.some(u => u.history.length);
-  const show = hasData && (d == null || d >= BACKUP_DAYS);
-  const b = $('backupBanner');
-  b.classList.toggle('hidden', !show);
-  if (show) b.replaceChildren(el('span', { text: d == null ? '💾 Es wurde noch nie gesichert.' : `💾 Die letzte Sicherung ist ${d} Tage her.` }),
-    el('button', { type: 'button', class: 'btn btn-primary small-btn', onclick: doBackup }, 'Jetzt sichern'));
+  const due = hasData && (d == null || d >= BACKUP_DAYS);
+  $('backupDot').classList.toggle('hidden', !due);
+  $('backupBtn').title = due ? (d == null ? 'Es wurde noch nie gesichert – jetzt sichern' : `Letzte Sicherung vor ${d} Tagen – jetzt sichern`) : 'Jetzt sichern';
+  if (due && !backupHintShown && !locked) { backupHintShown = true; setTimeout(() => toast('💾 ' + $('backupBtn').title + ' (Knopf oben rechts).', 5000), 1500); }
 }
 async function renderSnapshots() {
   const box = $('snapList'); box.replaceChildren(el('p', { class: 'small muted', text: 'lade …' }));
@@ -3379,7 +3405,8 @@ function petStrokeFeedback(st) {
   const len = pathLen(st.pts);
   if (Math.min(...ys) < row.top - 0.12 || Math.max(...ys) > row.bottom + 0.12) { petStrokeT = Date.now(); petSet('stolpert', 1500, 'Hoppla – über die Linie hinaus!', true); return; }
   if (len < 0.5) return;
-  const tr = tremorOf([{ pts: st.pts, len }]);
+  const tr0 = tremorOf([{ pts: st.pts, len }]), q = 0.3 / pad.scale;
+  const tr = tr0 == null ? null : Math.sqrt(Math.max(0, tr0 * tr0 - q * q));
   if (tr != null && tr > 0.009) { petStrokeT = Date.now(); petSet('stolpert', 1500, 'Die Linie wackelt – ganz ruhig!', true); return; }
   if (len >= 1 && tr != null && tr < 0.004 && Math.random() < 0.35) { petStrokeT = Date.now(); petSet('freut', 1300, pick(['Schön gleichmäßig!', 'Ganz ruhig – super!', 'Schöner Schwung!']), true); }
 }

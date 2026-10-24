@@ -11,7 +11,7 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
 ## Funktionen
 
 - **Schreib-Studio:** Buchstaben, Wörter und Verbindungen sowie freies Schreiben mit Ausdauer-Test, Lineatur, Spurhilfe und Vorlage mit „Bewegung zeigen“.
-- **Lineatur wählbar:** alle vier Linien, Grund-/Mittel-/Oberlinie, Grund-/Mittellinie oder nur Grundlinie. Der Heft-Modus bietet kleine Schrift mit echtem Zeilenabstand (7–12 mm, nach einmaliger Bildschirm-Vermessung mit dem Lineal).
+- **Lineatur wählbar:** alle vier Linien, Grund-/Mittel-/Oberlinie, Grund-/Mittellinie oder nur Grundlinie. Der Heft-Modus bietet kleine Schrift mit echtem Zeilenabstand (3,5–12 mm, nach einmaliger Bildschirm-Vermessung mit dem Lineal). Die linke Leiste lässt sich wegklappen, damit das Schreibfeld die ganze Breite nutzt.
 - **Auswertung durch Bildvergleich mit der Vorlage:**
   - Form, Größe und Lage im Liniensystem
   - Ober- und Unterlängen
