@@ -18,14 +18,20 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
   - Proportionen im Buchstaben und zwischen den Buchstaben
   - Zittern, gerade Abstriche
   - Schlaufen und Bögen
-  - Grundlinie, Neigung, Flüssigkeit, Druck (nur mit Stift)
+  - Grundlinie, Neigung, Flüssigkeit
+  - Schreibtempo (Auf- und Abbewegungen pro Sekunde, Zielbereich einstellbar) und Rhythmus (Gleichmaß der Bewegungen)
+  - Druck und Druckschwankung (nur mit Stift mit Drucksensor)
+
+  Nach der Auswertung färbt sich die Schrift: Rot zeigt Abweichungen von der Vorlage, zu viel Druck, Verlassen der Linie oder Zittern; Grün bzw. Weiß auf der Tafel heißt „in Ordnung“.
 
   Die Strenge (mild, normal, streng) ist unter „Nutzer & Daten“ einstellbar.
+- **Radierer:** einzelne Striche wegwischen; „Zurück“ nimmt den letzten Strich weg.
+- **Untergründe:** Papier (creme), weißes Blatt, kariertes Blatt (Kästchen 4/5/7/10 mm in echter Größe), Pergament, grüne Tafel und Schiefertafel (mit Kreide).
 - **Meine Schrift:** Form je Buchstabe wählen, eigene Formen und Klassen-Vorlagen vorschreiben.
 - **Begleiter:** Drache, Eule oder Fuchs reagieren beim Schreiben und nach der Auswertung.
 - **Welten und Abzeichen:** Mit Tropfen sechs Welten aufbauen.
 - **Schreibbaum:** Wurzeln stehen für die Grundlagen, der Stamm für das Liniengefühl, die Äste für Buchstabengruppen und die Blätter für einzelne Buchstaben.
-- **Papier:** A4-Arbeitsblätter drucken, Foto entzerren und selbst einschätzen.
+- **Papier:** A4-Arbeitsblätter drucken (auch kariert oder ohne Linien), Foto entzerren und selbst einschätzen.
 - **Daten:** Sicherung mit Erinnerung nach 7 Tagen, Speicherstände und optionaler Passwortschutz.
 
 ## Ordner
