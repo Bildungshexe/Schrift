@@ -430,7 +430,13 @@
                 <select class="input" id="gridMm"><option value="4">4 mm</option><option value="5">5 mm (übliche Rechenkästchen)</option><option value="7">7 mm</option><option value="10">10 mm</option></select>
               </label>
               <label class="field row" style="gap:10px"><input type="checkbox" id="showErrors" style="width:22px;height:22px"> <span style="margin:0">Fehler in der Schrift farbig zeigen (rot = Problem, grün bzw. weiß = passt)</span></label>
-              <label class="field row" style="gap:10px"><input type="checkbox" id="ghostToggle" style="width:22px;height:22px"> <span style="margin:0">Spurhilfe im Schreibfeld (Vorlage hell zum Nachspuren)</span></label>
+              <label class="field"><span>Spurhilfe (Vorlage hell zum Nachspuren)</span>
+                <select class="input" id="ghostSel">
+                  <option value="auto">automatisch – verschwindet nach 3 guten Versuchen je Buchstabe</option>
+                  <option value="on">immer an</option><option value="off">aus</option>
+                </select>
+              </label>
+              <p class="small muted" style="margin-top:-4px">Nachspuren ist Üben, kein Schreiben: Mit Spurhilfe gibt es weniger Tropfen, und der Buchstabe zählt noch nicht für den Fortschritt.</p>
               <label class="field"><span>Strichstärke</span>
                 <select class="input" id="strokeWidthSel">
                   <option value="fein">fein (wie Füller)</option>
@@ -959,7 +965,7 @@ function defaultState() {
     version: 2, activeUserId: null, users: [], library: {}, lastWorksheet: null,
     backup: { lastAt: null, lastAutoDay: null },
     security: { enabled: false, autoLockMin: 0 },
-    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, panelOff: false, panelSide: 'auto', surface: 'creme', gridMm: 5, showErrors: true, tempoMin: 1.5, tempoMax: 4.5, ghost: true, penStyle: 'classic',
+    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, panelOff: false, panelSide: 'auto', surface: 'creme', gridMm: 5, showErrors: true, tempoMin: 1.5, tempoMax: 4.5, ghost: 'auto', penStyle: 'classic',
       simPressure: 0.5, strokeWidth: 'mittel', lowLatency: true, strictness: 'normal', rowsByMode: { letter: 1, word: 2, free: 3 } }
   };
 }
@@ -987,16 +993,39 @@ function sanitizeUser(u) {
       [k, { items: Array.isArray(v.items) ? v.items.filter(it => isObj(it) && typeof it.i === 'string' && Number.isFinite(it.x) && Number.isFinite(it.y)).map(it => ({ i: it.i, x: it.x, y: it.y, s: num(it.s, 1) })).slice(0, MAX_ITEMS) : [] }])) : {},
     worldsUnlocked: Array.isArray(u.worldsUnlocked) ? [...new Set(u.worldsUnlocked.filter(id => worldById(id)))] : [],
     activeWorld: typeof u.activeWorld === 'string' && worldById(u.activeWorld) ? u.activeWorld : null,
-    badges: isObj(u.badges) ? u.badges : {}
+    badges: isObj(u.badges) ? u.badges : {},
+    ghostOk: isObj(u.ghostOk) ? Object.fromEntries(Object.entries(u.ghostOk).filter(([, v]) => Number.isFinite(v))) : {},
+    prefs: isObj(u.prefs) ? u.prefs : null
   });
 }
+// Diese Einstellungen gehören dem Kind (wandern beim Schreiberwechsel mit); der Rest gehört dem Gerät
+const USER_PREF_KEYS = ['lineRatio', 'guides', 'heftMm', 'panelOff', 'panelSide', 'surface', 'gridMm', 'showErrors', 'tempoMin', 'tempoMax', 'ghost', 'penStyle', 'strokeWidth', 'strictness', 'rowsByMode', 'simPressure'];
 function sanitizeState(raw) {
   const s = defaultState();
   if (!isObj(raw)) raw = {};
-  if (isObj(raw.settings)) {
-    Object.assign(s.settings, raw.settings);
-    s.settings.rowsByMode = Object.assign({}, defaultState().settings.rowsByMode, isObj(raw.settings.rowsByMode) ? raw.settings.rowsByMode : {});
-  }
+  if (isObj(raw.settings)) Object.assign(s.settings, raw.settings);
+  s.users = Array.isArray(raw.users) ? raw.users.filter(isObj).map(sanitizeUser) : [];
+  if (!s.users.length) s.users.push(defaultUser('Schreiber 1'));
+  s.activeUserId = s.users.some(u => u.id === raw.activeUserId) ? raw.activeUserId : s.users[0].id;
+  const au = s.users.find(u => u.id === s.activeUserId);
+  if (au.prefs) for (const k of USER_PREF_KEYS) if (k in au.prefs) s.settings[k] = au.prefs[k];
+  sanitizeSettings(s.settings);
+  s.library = isObj(raw.library) ? raw.library : {};
+  s.lastWorksheet = isObj(raw.lastWorksheet) ? raw.lastWorksheet : null;
+  if (isObj(raw.backup)) s.backup = { lastAt: num(raw.backup.lastAt, null), lastAutoDay: typeof raw.backup.lastAutoDay === 'string' ? raw.backup.lastAutoDay : null };
+  const sec = raw.security;
+  if (isObj(sec) && sec.enabled && typeof sec.hash === 'string' && typeof sec.salt === 'string' && typeof sec.recHash === 'string' && typeof sec.recSalt === 'string')
+    s.security = { enabled: true, hash: sec.hash, salt: sec.salt, recHash: sec.recHash, recSalt: sec.recSalt, autoLockMin: num(sec.autoLockMin, 0) };
+  else s.security = { enabled: false, autoLockMin: 0 };
+  return s;
+}
+function sanitizeSettings(st) {
+  const s = { settings: st };
+  s.settings.rowsByMode = Object.assign({}, defaultState().settings.rowsByMode, isObj(s.settings.rowsByMode) ? s.settings.rowsByMode : {});
+  if (s.settings.ghost === true) s.settings.ghost = 'auto'; else if (s.settings.ghost === false) s.settings.ghost = 'off';
+  if (!['auto', 'on', 'off'].includes(s.settings.ghost)) s.settings.ghost = 'auto';
+  if (!['classic', 'emerald', 'fire', 'gold'].includes(s.settings.penStyle)) s.settings.penStyle = 'classic';
+  s.settings.simPressure = clamp(num(Number(s.settings.simPressure), 0.5), 0.1, 1);
   if (!['auto', 'pen', 'touch'].includes(s.settings.inputMode)) s.settings.inputMode = 'auto';
   if (!['fein', 'mittel', 'kraeftig'].includes(s.settings.strokeWidth)) s.settings.strokeWidth = 'mittel';
   if (!['mild', 'normal', 'streng'].includes(s.settings.strictness)) s.settings.strictness = 'normal';
@@ -1014,17 +1043,12 @@ function sanitizeState(raw) {
   s.settings.lowLatency = s.settings.lowLatency !== false;
   if (!VARIANTS.some(v => v.id === s.settings.defaultVariant)) s.settings.defaultVariant = 'va';
   s.settings.lineRatio = clamp(num(Number(s.settings.lineRatio), 1), 0.5, 1.2);
-  s.library = isObj(raw.library) ? raw.library : {};
-  s.lastWorksheet = isObj(raw.lastWorksheet) ? raw.lastWorksheet : null;
-  if (isObj(raw.backup)) s.backup = { lastAt: num(raw.backup.lastAt, null), lastAutoDay: typeof raw.backup.lastAutoDay === 'string' ? raw.backup.lastAutoDay : null };
-  const sec = raw.security;
-  if (isObj(sec) && sec.enabled && typeof sec.hash === 'string' && typeof sec.salt === 'string' && typeof sec.recHash === 'string' && typeof sec.recSalt === 'string')
-    s.security = { enabled: true, hash: sec.hash, salt: sec.salt, recHash: sec.recHash, recSalt: sec.recSalt, autoLockMin: num(sec.autoLockMin, 0) };
-  else s.security = { enabled: false, autoLockMin: 0 };
-  s.users = Array.isArray(raw.users) ? raw.users.filter(isObj).map(sanitizeUser) : [];
-  if (!s.users.length) s.users.push(defaultUser('Schreiber 1'));
-  s.activeUserId = s.users.some(u => u.id === raw.activeUserId) ? raw.activeUserId : s.users[0].id;
-  return s;
+  return st;
+}
+// aktuelle Kind-Einstellungen beim aktiven Schreiber ablegen
+function storeUserPrefs() {
+  const u = getActiveUser(); if (!u) return;
+  u.prefs = JSON.parse(JSON.stringify(Object.fromEntries(USER_PREF_KEYS.map(k => [k, appData.settings[k]]))));
 }
 
 let appData = sanitizeState(null);
@@ -1049,9 +1073,22 @@ function loadState() {
   if (migrated) { saveState(); toast('Daten aus der alten Version übernommen (Namen und Punkte).'); }
 }
 
+// Bei vollem Speicher stufenweise ältere Verlaufseinträge kürzen (Statistik je Buchstabe, Proben und Welten bleiben)
+const TRIM_STEPS = [200, 120, 60];
 function saveState() {
+  storeUserPrefs();
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+    catch (e) {
+      let ok = false;
+      for (const n of TRIM_STEPS) {
+        if (!appData.users.some(u => u.history.length > n)) continue;
+        for (const u of appData.users) u.history = u.history.slice(0, n);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); ok = true; break; } catch (_) {}
+      }
+      if (!ok) throw e;
+      toast(`Der Speicher war voll: Der Übungsverlauf wurde auf die letzten ${Math.max(...appData.users.map(u => u.history.length))} Einträge je Kind gekürzt. Bitte jetzt sichern.`, 7000);
+    }
     storageOk = true;
   } catch (e) {
     storageOk = false;
@@ -1067,6 +1104,8 @@ function requestPersist() {
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (_) {}
 }
 
+// Browser erlauben je Website etwa 5 Mio. Zeichen (Safari teils weniger) – vorsichtig gerechnet
+const STORAGE_LIMIT = 4.5 * 1024 * 1024;
 function getActiveUser() { return appData.users.find(u => u.id === appData.activeUserId) || appData.users[0]; }
 function choiceOf(ch, user = getActiveUser()) { return user.alphabet[ch] || appData.settings.defaultVariant; }
 function levelOf(points) { return Math.floor(Math.sqrt(points / 60)) + 1; }
@@ -2062,6 +2101,49 @@ const TIPS = {
   zone_u: 'Die Schlaufe bzw. der Bogen im Unterband fehlt oder ist zugelaufen.'
 };
 
+// Grundregeln des Bewegungsablaufs (gelten für Druck-, Grund-, VA-, LA- und SAS-Schrift):
+// 1. Rundungen bei a c d e g o q ä ö laufen gegen den Uhrzeigersinn
+// 2. Lange senkrechte Striche werden von oben nach unten gezogen (Abstrich)
+// 3. Die Striche folgen von links nach rechts aufeinander (waagrechte Querstriche ausgenommen)
+const ROUND_CCW = new Set([...'acdegoqäö']);
+function ruleDirection(groups, ch) {
+  const per = [], seen = { round: 0, down: 0, order: 0 };
+  for (const items of groups) {
+    const body = items.filter(s => !s.small); if (!body.length) continue;
+    let checked = 0, bad = 0;
+    if (ROUND_CCW.has(ch)) { // Drehsinn im Mittelband über die Flächenformel (y zeigt nach unten: positiv = Uhrzeigersinn)
+      const st = body[0], P = st.pts.map(p => ({ x: p.x, y: p.y - st.row.base })).filter(p => p.y > -1.15 && p.y < 0.15);
+      if (P.length >= 8) {
+        let A = 0; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; A += a.x * b.y - b.x * a.y; }
+        const xs = P.map(p => p.x), ys = P.map(p => p.y);
+        const n = A / 2 / Math.max(0.05, (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)));
+        if (Math.abs(n) > 0.12) { checked++; if (n > 0) { bad++; seen.round++; } }
+      }
+    }
+    let up = 0, down = 0; // steile Strecken: aufwärts vs. abwärts
+    for (const st of body) for (let i = 1; i < st.pts.length; i++) {
+      const dx = st.pts[i].x - st.pts[i - 1].x, dy = st.pts[i].y - st.pts[i - 1].y;
+      if (Math.abs(dx) < 0.4 * Math.abs(dy)) { if (dy > 0) down += dy; else up -= dy; }
+    }
+    if (up + down > 0.8) { checked++; if (up > 0.8 && up > down * 1.6) { bad++; seen.down++; } }
+    const tall = body.filter(s => s.maxY - s.minY >= 0.35);
+    if (tall.length > 1) {
+      checked++;
+      if (tall.some((s, i) => i > 0 && s.pts[0].x < tall[i - 1].pts[0].x - 0.8)) { bad++; seen.order++; }
+    }
+    if (checked) per.push(clamp(100 - bad * 50, 0, 100));
+  }
+  if (!per.length) return null;
+  const msg = [];
+  if (seen.round) msg.push(`${seen.round}× Rundung im Uhrzeigersinn`);
+  if (seen.down) msg.push(`${seen.down}× Abstrich von unten nach oben`);
+  if (seen.order) msg.push(`${seen.order}× Striche nicht von links nach rechts`);
+  const tip = seen.round ? 'Rundungen bei a, c, d, e, g, o und q schreibst du gegen den Uhrzeigersinn – oben rechts anfangen, nach links herum.'
+    : seen.down ? 'Lange senkrechte Striche ziehst du von oben nach unten – das geht lockerer und schneller.'
+    : seen.order ? 'Schreibe die Striche von links nach rechts – so bleibt die Hand in Bewegung.' : null;
+  return { score: mean(per), text: msg.length ? msg.join(' · ') : 'Grundregeln eingehalten', tip };
+}
+
 function analyzeAttempt(strokes, c) {
   const S = prepare(strokes, c.rows);
   const user = c.user, crit = [], info = [], visuals = [], cmp = [];
@@ -2214,7 +2296,15 @@ function analyzeAttempt(strokes, c) {
         if (d2 < d1 * 0.65 && d1 > 0.45) reversed++;
       }
       if (dirScores.length) add('dir', 'Bewegungsablauf', mean(dirScores), reversed ? `${reversed}× vermutlich umgekehrte Richtung` : 'Reihenfolge und Richtung verglichen', (reversed || mean(dirScores) < 60) ? TIPS.dir : null);
-    } else if (src && src.kind === 'font') info.push('Bewegungsablauf: Eine Schriftart enthält keine Strichreihenfolge. Für den Richtungsvergleich die Form einmal in „Meine Schrift“ vorschreiben.');
+    } else if (src) {
+      // Eine Schriftart kennt keine Strichfolge → Grundregeln, die für alle Schulschriften gelten
+      const rd = ruleDirection(groups.map(g => [...g.items].sort((a, b) => a.idx - b.idx)), ch);
+      if (rd) {
+        add('dir', 'Bewegungsablauf (Grundregeln)', rd.score, rd.text, rd.tip);
+        if (rd.score < 100) capAt(80, 'Die Bewegungsrichtung stimmt noch nicht – das bremst später beim flüssigen Schreiben.');
+      }
+      info.push('Bewegungsablauf: Geprüft werden Grundregeln (Rundungen gegen den Uhrzeigersinn, Abstriche von oben nach unten, von links nach rechts). Für den genauen Vergleich mit Strichfolge die Form einmal in „Meine Schrift“ vorschreiben.');
+    }
     if (src && src.approx) info.push('Vorlage ist die Systemschrift (Ersatz) – der Formvergleich ist hier nur ein grober Richtwert.');
   }
 
@@ -2484,8 +2574,8 @@ function initStudio() {
   $('strokeWidthSel').addEventListener('change', e => { s.strokeWidth = e.target.value; saveState(); pad.redraw(); if (recPad) recPad.redraw(); });
   $('lowLatencyToggle').checked = !!s.lowLatency;
   $('lowLatencyToggle').addEventListener('change', e => { s.lowLatency = e.target.checked; saveState(); toast('Wird nach dem Neuladen der Seite wirksam.'); });
-  $('ghostToggle').checked = !!s.ghost;
-  $('ghostToggle').addEventListener('change', e => { s.ghost = e.target.checked; saveState(); pad.redrawGuides(); });
+  $('ghostSel').value = s.ghost;
+  $('ghostSel').addEventListener('change', e => { s.ghost = e.target.value; saveState(); pad.redrawGuides(); });
   $('penStyle').value = s.penStyle;
   $('penStyle').addEventListener('change', e => { s.penStyle = e.target.value; saveState(); });
   $('simPressure').value = s.simPressure;
@@ -2495,6 +2585,19 @@ function initStudio() {
 
   if ('ResizeObserver' in window) new ResizeObserver(() => renderStrip()).observe($('modelStrip'));
   updatePenIndicator();
+  studio.applyPanel = applyPanel; studio.applySurface = applySurface;
+}
+// Bedienelemente an die Einstellungen des aktiven Kindes anpassen (nach dem Schreiberwechsel)
+function syncSettingsUI() {
+  const s = appData.settings;
+  $('surfaceSel').value = s.surface; $('gridMm').value = String(s.gridMm); $('showErrors').checked = !!s.showErrors;
+  $('ratioSelect').value = String(s.lineRatio); $('guidesSelect').value = s.guides; $('heftMm').value = String(s.heftMm);
+  $('strokeWidthSel').value = s.strokeWidth; $('ghostSel').value = s.ghost; $('penStyle').value = s.penStyle; $('panelSide').value = s.panelSide;
+  $('simPressure').value = s.simPressure; $('simPressureVal').textContent = Math.round(s.simPressure * 100) + ' %';
+  document.body.classList.toggle('panel-out', !!s.panelOff);
+  applyPanelSide(); if (studio.applyPanel) studio.applyPanel(); if (studio.applySurface) studio.applySurface();
+  pad.setRows(s.rowsByMode[studio.mode]); pad.layout();
+  if (recPad) recPad.layout();
 }
 
 // Ein Balken mit fester Pixellänge wird mit dem Lineal gemessen → Millimeter pro Pixel
@@ -2539,8 +2642,15 @@ function updateLive() {
   $('liveSpeed').textContent = liveSpeed == null ? '–' : fmt(liveSpeed);
 }
 
+// Spurhilfe „automatisch“: je Buchstabe nur, bis 3 Versuche mit Spurhilfe gut (≥ 70) waren
+const GHOST_FADE = 3;
+function ghostActive() {
+  const g = appData.settings.ghost;
+  if (g === 'off' || studio.mode === 'free') return false;
+  return g === 'on' || ((getActiveUser().ghostOk || {})[studio.letter] || 0) < GHOST_FADE;
+}
 function drawGhost(g, tf, p) {
-  if (!appData.settings.ghost || studio.mode === 'free') return;
+  if (!ghostActive()) return;
   const row = rowGeom(0);
   const color = surface().dark ? 'rgba(255,255,255,0.22)' : appData.settings.surface === 'pergament' ? 'rgba(90,55,20,0.22)' : 'rgba(100,116,139,0.30)';
   const opt = { color, variantFor: studioVariantFor, lw: Math.max(2, tf.scale * 0.08) };
@@ -2693,6 +2803,12 @@ function evaluateAttempt() {
   const src = studio.mode === 'letter' ? modelSource(studio.letter, studio.trialVariant) : null;
   const res = analyzeAttempt(pad.strokes, { mode: studio.mode, letter: studio.letter, word: studio.word, rows: pad.rows, user, src, variantFor: studioVariantFor, pxPerBand: pad.scale });
   if (res.score == null) { toast('Zu wenig geschrieben für eine Auswertung – schreibe etwas mehr.'); return; }
+  res.traced = ghostActive();
+  if (res.traced) {
+    const left = GHOST_FADE - ((user.ghostOk || {})[studio.letter] || 0) - (res.score >= 70 ? 1 : 0);
+    res.info.unshift('Mit Spurhilfe geschrieben (Nachspuren): Es gibt weniger Tropfen, und der Versuch zählt noch nicht für den Fortschritt. ' +
+      (appData.settings.ghost === 'auto' ? (left > 0 ? `Noch ${left} gute(r) Versuch(e), dann schreibst du ohne Spurhilfe.` : 'Ab jetzt schreibst du diesen Buchstaben ohne Spurhilfe!') : ''));
+  }
   studio.evaluated = true;
   markProblems(pad.strokes, res, { user, rows: pad.rows, pxPerBand: pad.scale });
   setEraser(false); pad.redraw();
@@ -2769,15 +2885,18 @@ function recordAttempt(user, res, src) {
   let earned = res.score < 50 ? 0 : Math.round((res.score - 50) / 5);
   earned = Math.round(earned * Math.max(0.25, 1 - 0.2 * sameToday));
   if (studio.mode === 'free') earned = Math.min(earned, 5);
+  if (res.traced) earned = Math.round(earned * 0.3); // Nachspuren bringt nur wenige Tropfen
   addPoints(user, earned);
   touchStreak(user);
   const target = studio.mode === 'letter' ? studio.letter : studio.mode === 'word' ? (studio.word || studio.letter) : 'Freies Schreiben';
   user.history.unshift({ ts: now, mode: studio.mode, target, letter: studio.mode === 'free' ? null : studio.letter, variant: src ? src.v : null, score: res.score,
-    m: Object.fromEntries(res.crit.map(c => [c.key, c.score])), pAvg: res.pAvg != null ? r2(res.pAvg) : null });
+    m: Object.fromEntries(res.crit.map(c => [c.key, c.score])), pAvg: res.pAvg != null ? r2(res.pAvg) : null, ...(res.traced ? { g: 1 } : {}) });
   user.history = user.history.slice(0, 400);
   if (res.pAvg != null) { user.pressureLog.push(r2(res.pAvg)); user.pressureLog = user.pressureLog.slice(-20); }
 
-  if (studio.mode === 'letter' || studio.mode === 'word') {
+  if (res.traced) { // nur mitzählen, wann die Spurhilfe verschwinden darf
+    if (res.score >= 70) { const go = user.ghostOk || (user.ghostOk = {}); go[studio.letter] = (go[studio.letter] || 0) + 1; }
+  } else if (studio.mode === 'letter' || studio.mode === 'word') {
     const ch = studio.letter;
     const ls = user.letterStats[ch] || { n: 0, sum: 0, best: 0, box: 1, due: 0 };
     ls.n++; ls.sum += res.score; ls.best = Math.max(ls.best, res.score);
@@ -3296,11 +3415,19 @@ function renderUsers() {
     const sel = $(id); if (!sel.options.length) for (let v = 0.5; v <= 8; v += 0.5) sel.append(el('option', { value: String(v), text: fmt(v) + ' Hz' }));
     sel.value = String(appData.settings[key]);
   }
-  let bytes = 0; try { bytes = (localStorage.getItem(STORAGE_KEY) || '').length * 2; } catch (_) {}
-  $('storageInfo').textContent = `Belegter Speicher: ca. ${fmt(bytes / 1024, 0)} KB${storageOk ? '' : ' · ⚠️ Speichern zuletzt fehlgeschlagen'}.`;
+  let chars = 0; try { chars = (localStorage.getItem(STORAGE_KEY) || '').length; } catch (_) {}
+  const pct = Math.round(chars / STORAGE_LIMIT * 100);
+  const per = appData.users.map(x => [x.name, JSON.stringify(x).length]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  $('storageInfo').textContent = `Belegter Speicher: ca. ${fmt(chars / 1024, 0)} KB von ca. ${fmt(STORAGE_LIMIT / 1024 / 1024, 1)} MB (${pct} %) · am meisten: ` +
+    per.map(([n, c]) => `${n} ${fmt(c / 1024, 0)} KB`).join(', ') + (pct >= 70 ? ' · ⚠️ Speicher wird knapp – bitte sichern. Bei vollem Speicher wird der ältere Übungsverlauf gekürzt.' : '') +
+    (storageOk ? '' : ' · ⚠️ Speichern zuletzt fehlgeschlagen') + '.';
 }
 function switchUser(id) {
-  appData.activeUserId = id; saveState(); refreshAll();
+  storeUserPrefs();
+  appData.activeUserId = id;
+  const u = getActiveUser();
+  if (u.prefs) { for (const k of USER_PREF_KEYS) if (k in u.prefs) appData.settings[k] = JSON.parse(JSON.stringify(u.prefs[k])); sanitizeSettings(appData.settings); }
+  saveState(); syncSettingsUI(); refreshAll();
   toast(`Aktiv: ${getActiveUser().name}`);
 }
 function initUsers() {

@@ -24,7 +24,10 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
 
   Nach der Auswertung färbt sich die Schrift: Rot zeigt Abweichungen von der Vorlage, zu viel Druck, Verlassen der Linie oder Zittern; Grün bzw. Weiß auf der Tafel heißt „in Ordnung“.
 
+  - Bewegungsablauf: mit selbst vorgeschriebener Vorlage genau (Strichfolge und Richtung), bei den eingebauten Schriften nach Grundregeln (Rundungen gegen den Uhrzeigersinn, Abstriche von oben nach unten, von links nach rechts)
+
   Die Strenge (mild, normal, streng) ist unter „Nutzer & Daten“ einstellbar.
+- **Spurhilfe ehrlich bewertet:** Nachspuren bringt nur wenige Tropfen und zählt nicht für den Fortschritt. In der Einstellung „automatisch“ verschwindet die Spurhilfe nach drei guten Versuchen je Buchstabe.
 - **Radierer:** einzelne Striche wegwischen; „Zurück“ nimmt den letzten Strich weg.
 - **Untergründe:** Papier (creme), weißes Blatt, kariertes Blatt (Kästchen 4/5/7/10 mm in echter Größe), Pergament, grüne Tafel und Schiefertafel (mit Kreide).
 - **Meine Schrift:** Form je Buchstabe wählen, eigene Formen und Klassen-Vorlagen vorschreiben.
@@ -32,7 +35,7 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
 - **Welten und Abzeichen:** Mit Tropfen sechs Welten aufbauen.
 - **Schreibbaum:** Wurzeln stehen für die Grundlagen, der Stamm für das Liniengefühl, die Äste für Buchstabengruppen und die Blätter für einzelne Buchstaben.
 - **Papier:** A4-Arbeitsblätter drucken (auch kariert oder ohne Linien), Foto entzerren und selbst einschätzen.
-- **Daten:** Sicherung mit Erinnerung nach 7 Tagen, Speicherstände und optionaler Passwortschutz.
+- **Daten:** Sicherung mit Erinnerung nach 7 Tagen, Speicherstände und optionaler Passwortschutz. Einstellungen wie Lineatur, Untergrund und Spurhilfe gelten pro Kind. Unter „Daten“ steht, wie voll der Speicher ist. Ist er voll, wird der ältere Übungsverlauf gekürzt; Statistik, Proben und Welten bleiben erhalten.
 
 ## Ordner
 
