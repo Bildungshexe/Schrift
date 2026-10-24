@@ -10,7 +10,7 @@ Die App ist eine einzelne Datei (`index.html`). Sie lädt nichts aus dem Interne
 
 1. Auf GitHub im Repository **Settings → Pages** öffnen.
 2. Unter „Build and deployment“ bei **Source** „Deploy from a branch“ wählen, dann Branch **main** und Ordner **/ (root)** → **Save**.
-3. Nach ein bis zwei Minuten läuft die App unter **https://bildungshexe.github.io/schrift/**.
+3. Nach ein bis zwei Minuten läuft die App unter **https://bildungshexe.github.io/Schrift/**.
 4. Auf dem iPad diese Adresse in Safari öffnen → „Teilen“ → „Zum Home-Bildschirm“. Danach startet sie wie eine App und funktioniert auch ohne Internet weiter, solange Safari die Seite im Speicher hat.
 
 Wichtig:
