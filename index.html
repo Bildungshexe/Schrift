@@ -105,10 +105,10 @@
 
     /* Schreib-Studio */
     .studio { display: grid; grid-template-columns: 340px 1fr; gap: 14px; align-items: start; }
-    body.lefty .studio { grid-template-columns: 1fr 340px; }
-    body.lefty .studio-panel { order: 2; }
+    body.panel-right .studio { grid-template-columns: 1fr 340px; }
+    body.panel-right .studio-panel { order: 2; }
     @media (max-width: 1000px) {
-      .studio, body.lefty .studio { grid-template-columns: 1fr; }
+      .studio, body.panel-right .studio { grid-template-columns: 1fr; }
       .studio-work { order: -1; }
     }
     .big-letter { font-size: 44px; font-weight: 700; width: 70px; height: 70px; border-radius: 14px; background: var(--paper); color: #1e293b; display: grid; place-items: center; flex: none; }
@@ -122,13 +122,16 @@
     .model-head .chip { min-height: 34px; padding: 4px 10px; font-size: 13px; }
     .model-label { flex: 1; min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .work-card { padding: 8px; }
-    .strip-wrap { position: relative; }
+    .strip-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+    .strip-wrap .strip { flex: 1; min-width: 0; }
     .strip { width: 100%; height: 72px; display: block; border-radius: 12px; background: var(--paper); }
-    .strip-wrap .pet-box { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); margin: 0; pointer-events: none; }
+    .strip-wrap .pet-box { order: -1; flex: none; margin: 0; pointer-events: none; }
+    body.lefty .strip-wrap .pet-box { order: 1; }
     .strip-wrap .pet, .strip-wrap .pet-bubble { pointer-events: auto; }
     .strip-wrap .pet, .strip-wrap .pet.has-img, .strip-wrap .pet img, .strip-wrap .pet.has-img img { width: 66px; height: 66px; }
     .strip-wrap .pet-emoji { font-size: 40px; }
-    .strip-wrap .pet-bubble { right: 70px; }
+    .strip-wrap .pet-bubble { right: auto; left: 70px; }
+    body.lefty .strip-wrap .pet-bubble { left: auto; right: 70px; }
     .warn { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.4); color: #fde68a; border-radius: 10px; padding: 8px 10px; font-size: 14px; margin-top: 6px; }
     .live { display: inline-flex; gap: 12px; align-items: center; font-size: 13px; color: var(--muted); white-space: nowrap; }
     .live b { color: var(--text); }
@@ -142,8 +145,14 @@
     .actions { display: grid; grid-template-columns: 1fr 1fr 1fr 2fr; gap: 8px; margin-top: 6px; }
     .actions .btn { min-height: 42px; }
     /* Leiste weggeklappt: Schreibfeld über die ganze Breite */
-    body.panel-off .studio, body.panel-off.lefty .studio { grid-template-columns: 1fr; }
+    body.panel-off .studio, body.panel-off.panel-right .studio { grid-template-columns: 1fr; }
     body.panel-off .studio-panel { display: none; }
+    /* Leiste gleitet zur eigenen Seite hinaus bzw. herein */
+    .studio-panel { transition: transform .26s ease, opacity .26s ease; }
+    body.panel-out .studio-panel { transform: translateX(-110%); opacity: 0; }
+    body.panel-out.panel-right .studio-panel { transform: translateX(110%); }
+    body.panel-right #panelToggle { order: 9; }
+    @media (prefers-reduced-motion: reduce) { .studio-panel { transition: none; } }
     .pen-ind { font-size: 13px; color: #6ee7b7; }
 
     /* Ergebnis */
@@ -402,6 +411,12 @@
                   <option value="1">gleich hoch (1 : 1 : 1)</option>
                   <option value="0.8">etwas kleiner (0,8 : 1 : 0,8)</option>
                   <option value="0.65">kleiner (0,65 : 1 : 0,65)</option>
+                </select>
+              </label>
+              <label class="field"><span>Leiste zum Wegklappen</span>
+                <select class="input" id="panelSide">
+                  <option value="auto">nach Schreibhand (Rechtshänder links, Linkshänder rechts)</option>
+                  <option value="left">links</option><option value="right">rechts</option>
                 </select>
               </label>
               <label class="field"><span>Untergrund</span>
@@ -944,7 +959,7 @@ function defaultState() {
     version: 2, activeUserId: null, users: [], library: {}, lastWorksheet: null,
     backup: { lastAt: null, lastAutoDay: null },
     security: { enabled: false, autoLockMin: 0 },
-    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, panelOff: false, surface: 'creme', gridMm: 5, showErrors: true, tempoMin: 1.5, tempoMax: 4.5, ghost: true, penStyle: 'classic',
+    settings: { inputMode: 'auto', defaultVariant: 'va', lineRatio: 1, guides: '3', heftMm: 9, mmPerPx: null, panelOff: false, panelSide: 'auto', surface: 'creme', gridMm: 5, showErrors: true, tempoMin: 1.5, tempoMax: 4.5, ghost: true, penStyle: 'classic',
       simPressure: 0.5, strokeWidth: 'mittel', lowLatency: true, strictness: 'normal', rowsByMode: { letter: 1, word: 2, free: 3 } }
   };
 }
@@ -993,6 +1008,7 @@ function sanitizeState(raw) {
   s.settings.guides = String(s.settings.guides);
   s.settings.heftMm = clamp(num(Number(s.settings.heftMm), 9), 3, 15);
   s.settings.panelOff = s.settings.panelOff === true;
+  if (!['auto', 'left', 'right'].includes(s.settings.panelSide)) s.settings.panelSide = 'auto';
   s.settings.mmPerPx = typeof s.settings.mmPerPx === 'number' && s.settings.mmPerPx > 0.05 && s.settings.mmPerPx < 1 ? s.settings.mmPerPx : null;
   for (const k of Object.keys(s.settings.rowsByMode)) { const v = s.settings.rowsByMode[k]; if (v !== 'heft' && ![1, 2, 3].includes(v)) s.settings.rowsByMode[k] = 1; }
   s.settings.lowLatency = s.settings.lowLatency !== false;
@@ -1064,6 +1080,7 @@ function updateUserUI() {
   $('userPointsDisplay').textContent = u.coins;
   $('userStreakDisplay').textContent = currentStreak(u);
   document.body.classList.toggle('lefty', u.handed === 'left');
+  applyPanelSide();
   const lvl = levelOf(u.points);
   const sel = $('penStyle');
   sel.querySelector('[value=fire]').disabled = lvl < 2;
@@ -1280,6 +1297,12 @@ function paintSurface(ctx, w, h, tf) {
     for (let y = oy; y < h; y += step) { ctx.moveTo(0, Math.round(y) + 0.5); ctx.lineTo(w, Math.round(y) + 0.5); }
     ctx.stroke();
   }
+}
+function applyPanelSide() {
+  const side = appData.settings.panelSide, left = getActiveUser().handed === 'left';
+  document.body.classList.toggle('panel-right', side === 'right' || (side === 'auto' && left));
+  const t = document.getElementById('panelToggle');
+  if (t && !appData.settings.panelOff) t.textContent = document.body.classList.contains('panel-right') ? 'Leiste ⇥' : '⇤ Leiste';
 }
 function mmPerPx() { return appData.settings.mmPerPx || MM_PER_PX_GUESS; }
 function heftScale() { return appData.settings.heftMm / rowPitch() / mmPerPx(); } // Pixel pro Mittelband
@@ -2430,11 +2453,26 @@ function initStudio() {
   $('heftMm').addEventListener('change', e => { if (!askClear()) { e.target.value = String(s.heftMm); return; } s.heftMm = Number(e.target.value); saveState(); pad.clear(); pad.layout(); renderStudio(); });
   const applyPanel = () => {
     document.body.classList.toggle('panel-off', !!s.panelOff);
-    $('panelToggle').textContent = s.panelOff ? '☰ Leiste' : '⇤ Leiste';
+    const right = document.body.classList.contains('panel-right');
+    $('panelToggle').textContent = s.panelOff ? '☰ Leiste' : right ? 'Leiste ⇥' : '⇤ Leiste';
     $('panelToggle').title = s.panelOff ? 'Leiste einblenden' : 'Leiste ausblenden – mehr Platz zum Schreiben';
   };
-  $('panelToggle').addEventListener('click', () => { s.panelOff = !s.panelOff; saveState(); applyPanel(); });
+  let sliding = null;
+  $('panelToggle').addEventListener('click', () => {
+    const b = document.body; clearTimeout(sliding);
+    s.panelOff = !s.panelOff; saveState();
+    if (s.panelOff) { // erst hinausgleiten, dann Platz freigeben
+      b.classList.add('panel-out'); $('panelToggle').textContent = '☰ Leiste';
+      sliding = setTimeout(applyPanel, 260);
+    } else { // Platz schaffen, dann hereingleiten
+      b.classList.add('panel-out'); applyPanel(); void $('panelToggle').offsetWidth;
+      requestAnimationFrame(() => b.classList.remove('panel-out'));
+    }
+  });
+  if (!s.panelOff) document.body.classList.remove('panel-out');
   applyPanel();
+  $('panelSide').value = s.panelSide;
+  $('panelSide').addEventListener('change', e => { s.panelSide = e.target.value; saveState(); applyPanelSide(); applyPanel(); });
   $('heftBtn').addEventListener('click', () => {
     if (!askClear()) return;
     s.guides = '0'; $('guidesSelect').value = '0';

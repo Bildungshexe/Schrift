@@ -11,7 +11,7 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
 ## Funktionen
 
 - **Schreib-Studio:** Buchstaben, Wörter und Verbindungen sowie freies Schreiben mit Ausdauer-Test, Lineatur, Spurhilfe und Vorlage mit „Bewegung zeigen“.
-- **Lineatur wählbar:** alle vier Linien, Grund-/Mittel-/Oberlinie, Grund-/Mittellinie oder nur Grundlinie. Der Heft-Modus bietet kleine Schrift mit echtem Zeilenabstand (3,5–12 mm, nach einmaliger Bildschirm-Vermessung mit dem Lineal). Die linke Leiste lässt sich wegklappen, damit das Schreibfeld die ganze Breite nutzt.
+- **Lineatur wählbar:** alle vier Linien, Grund-/Mittel-/Oberlinie, Grund-/Mittellinie oder nur Grundlinie. Der Heft-Modus bietet kleine Schrift mit echtem Zeilenabstand (3,5–12 mm, nach einmaliger Bildschirm-Vermessung mit dem Lineal). Die Leiste mit den Einstellungen gleitet auf Knopfdruck zur Seite hinaus, damit das Schreibfeld die ganze Breite nutzt. Sie sitzt nach Schreibhand links (Rechtshänder) oder rechts (Linkshänder) oder fest auf einer gewählten Seite.
 - **Auswertung durch Bildvergleich mit der Vorlage:**
   - Form, Größe und Lage im Liniensystem
   - Ober- und Unterlängen
@@ -28,7 +28,7 @@ Tipp für das iPad: Seite in Safari öffnen → „Teilen“ → „Zum Home-Bil
 - **Radierer:** einzelne Striche wegwischen; „Zurück“ nimmt den letzten Strich weg.
 - **Untergründe:** Papier (creme), weißes Blatt, kariertes Blatt (Kästchen 4/5/7/10 mm in echter Größe), Pergament, grüne Tafel und Schiefertafel (mit Kreide).
 - **Meine Schrift:** Form je Buchstabe wählen, eigene Formen und Klassen-Vorlagen vorschreiben.
-- **Begleiter:** Drache, Eule oder Fuchs reagieren beim Schreiben und nach der Auswertung.
+- **Begleiter:** Drache, Eule oder Fuchs reagieren beim Schreiben und nach der Auswertung. Er sitzt auf der Seite, die die Schreibhand nicht verdeckt: bei Rechtshändern links, bei Linkshändern rechts.
 - **Welten und Abzeichen:** Mit Tropfen sechs Welten aufbauen.
 - **Schreibbaum:** Wurzeln stehen für die Grundlagen, der Stamm für das Liniengefühl, die Äste für Buchstabengruppen und die Blätter für einzelne Buchstaben.
 - **Papier:** A4-Arbeitsblätter drucken (auch kariert oder ohne Linien), Foto entzerren und selbst einschätzen.
