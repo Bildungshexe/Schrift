@@ -38,6 +38,14 @@ const EXPECT = {
     /Kind, mit Schwerpunkten: sichtbar: \[Flüssigkeit/,
     /Ausführlich: sichtbar: \[Grundlinie \d+ · .*\|/
   ],
+  schriftbild_zeile: [
+    /normal: Wert (8|9)\d .*size=9\d lines=100 space=100/,
+    /flach: Wert [0-6]\d .*size=[0-2]?\d /,
+    /zu groß mit Unterlängen: .*lines=[0-6]\d/,
+    /ohne Wortlücken: .*space=30/,
+    /riesige Lücken: .*space=[0-4]?\d /,
+    /Heft 9 mm: .*≈ \d,\d mm/
+  ],
   radierer_untergruende: [/nach Radieren: 1 Strich\(e\), ausgewertet=false/],
   begleiter_seite: [/links-H: .*panel-right/, /Linksh\., Leiste links: .*Klassen lefty$/m]
 };

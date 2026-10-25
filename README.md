@@ -38,6 +38,7 @@ Wichtig:
 
   Nach der Auswertung färbt sich die Schrift: Rot zeigt Abweichungen von der Vorlage, zu viel Druck, Verlassen der Linie oder Zittern; Grün bzw. Weiß auf der Tafel heißt „in Ordnung“.
 
+  - Schriftbild auf der Zeile: Mittelband im Verhältnis zur Zeilenhöhe (auch bei sehr flacher oder sehr großer Schrift, im Heft-Modus in Millimetern), Platz zwischen den Zeilen (stoßen Ober- und Unterlängen an die Nachbarzeile?) und beim freien Schreiben die Wortabstände
   - Bewegungsablauf: mit selbst vorgeschriebener Vorlage genau (Strichfolge und Richtung), bei den eingebauten Schriften nach Grundregeln (Rundungen gegen den Uhrzeigersinn, Abstriche von oben nach unten, von links nach rechts)
 
   Die Strenge (mild, normal, streng) ist unter „Nutzer & Daten“ einstellbar.
@@ -74,7 +75,7 @@ Hintergründe (`welt_*_hintergrund`) nicht freistellen, sondern als JPEG (ca. 12
 
 ## Tests
 
-Nach jeder Änderung prüfen 20 automatische Tests die App im Browser: Auswertung, Bewegungsablauf, Spurhilfe, Kinderansicht, Einstellungen pro Kind, Speicher, Radierer, Untergründe, Heft-Modus, Begleiter, Welten und Baum. Bei jedem Hochladen auf GitHub laufen sie automatisch (Reiter **Actions**; ein grüner Haken heißt bestanden).
+Nach jeder Änderung prüfen 21 automatische Tests die App im Browser: Auswertung, Schriftbild auf der Zeile, Bewegungsablauf, Spurhilfe, Kinderansicht, Einstellungen pro Kind, Speicher, Radierer, Untergründe, Heft-Modus, Begleiter, Welten und Baum. Bei jedem Hochladen auf GitHub laufen sie automatisch (Reiter **Actions**; ein grüner Haken heißt bestanden).
 
 Selbst ausführen (Node.js nötig):
 

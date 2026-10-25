@@ -1012,7 +1012,7 @@ function sanitizeUser(u) {
 // Schwerpunkte, die die Lehrkraft für ein Kind wählen kann (Schlüssel der Kriterien)
 const FOCUS_OPTIONS = [['form', 'Form'], ['fit', 'Größe & Lage'], ['base', 'Grundlinie'], ['size', 'Mittelband-Höhe'], ['extent', 'Ober- & Unterlängen'],
   ['prop', 'Proportion'], ['struct', 'Schlaufen & Bögen'], ['straight', 'Gerade Abstriche'], ['slant', 'Neigung'], ['dir', 'Bewegungsablauf'],
-  ['flu', 'Flüssigkeit'], ['tempo', 'Tempo'], ['rhythm', 'Rhythmus'], ['tremor', 'Ruhige Linie'], ['pressure', 'Druck']];
+  ['space', 'Wortabstände'], ['lines', 'Platz zwischen den Zeilen'], ['flu', 'Flüssigkeit'], ['tempo', 'Tempo'], ['rhythm', 'Rhythmus'], ['tremor', 'Ruhige Linie'], ['pressure', 'Druck']];
 // Diese Einstellungen gehören dem Kind (wandern beim Schreiberwechsel mit); der Rest gehört dem Gerät
 const USER_PREF_KEYS = ['lineRatio', 'guides', 'heftMm', 'panelOff', 'panelSide', 'surface', 'gridMm', 'showErrors', 'tempoMin', 'tempoMax', 'ghost', 'penStyle', 'strokeWidth', 'strictness', 'rowsByMode', 'simPressure', 'resultView', 'focusCrit'];
 function sanitizeState(raw) {
@@ -2355,7 +2355,9 @@ function analyzeAttempt(strokes, c) {
   // ---------- Frei: Plausibilität und Ober-/Unterlängen im Verhältnis ----------
   if (c.mode === 'free') {
     const turns = main.reduce((a, s) => a + zigzag(s.rs.map(p => p.y), 0.22).length, 0), dens = turns / inkLen;
-    if (m.highs.length < 4 || m.lows.length < 4 || dens < 0.5 || dens > 5) capAt(25, 'Das sieht noch nicht wie Schrift aus. Schreibe den Satz oben ab.');
+    // obere Wendepunkte unabhängig von der Mittellinie zählen – auch sehr flache oder sehr große Schrift ist Schrift
+    const highsAll = main.reduce((a, s) => a + zigzag(s.rs.map(p => p.y), 0.12).filter(t => t.type === 'high').length, 0);
+    if (highsAll < 4 || m.lows.length < 4 || dens < 0.5 || dens > 5) capAt(25, 'Das sieht noch nicht wie Schrift aus. Schreibe den Satz oben ab.');
     const lb = modelBox('l', vf), gb = modelBox('g', vf);
     if (lb && m.asc.length >= 2) {
       const expA = -lb.y0 - 1, ma = mean(m.asc);
@@ -2383,7 +2385,74 @@ function analyzeAttempt(strokes, c) {
 
   // ---------- Gesamtwert ----------
   // Die Form zählt am meisten: Nur wer den Buchstaben sauber und in richtiger Proportion schreibt, erreicht hohe Werte.
-  const W = { form: 3, fit: 1.5, extent: 1.2, extentU: 1.2, prop: 1, cons: 1, tremor: 1, straight: 1, base: 1, size: 1, slant: 0.6, flu: 0.5, pressure: 0.5, pvar: 0.4, tempo: 0.5, rhythm: 0.7, struct: 0.7, dir: 0.5 };
+  // ---------- Schriftbild auf der Zeile (wie im Heft) ----------
+  const heft = appData.settings.rowsByMode[c.mode] === 'heft', P = rowPitch(cfg);
+  const mmBand = heft ? appData.settings.heftMm / P : null;
+  // Mittelband robust messen: obere Wendepunkte über der Grundlinie, Oberlängen (≥ 1,45 × Mittelband) schrittweise aussortieren.
+  // Anders als „Mittelband-Höhe“ funktioniert das auch, wenn die Schrift viel zu flach oder viel zu groß ist.
+  const hs = [];
+  for (const st of main) { const ys = st.rs.map(p => p.y); for (const tp of zigzag(ys, 0.12)) if (tp.type === 'high' && tp.i > 0 && tp.i < ys.length - 1) { const h = st.row.base - ys[tp.i]; if (h > 0.1) hs.push(h); } }
+  let xh = null;
+  if (hs.length >= 4) { xh = median(hs); for (let k = 0; k < 3; k++) { const low = hs.filter(h => h < xh * 1.45); if (low.length >= 3) xh = median(low); } }
+  if (xh != null && (xh < 0.72 || xh > 1.35)) { // so weit daneben, dass „Mittelband-Höhe“ es nicht mehr sicher erfasst
+    const i = crit.findIndex(x => x.key === 'size'); if (i >= 0) crit.splice(i, 1);
+    const lx = Math.abs(Math.log(xh));
+    add('size', 'Mittelband-Höhe', 100 - Math.max(0, lx - 0.15) * 180,
+      `≈ ${fmt(xh, 2)} (Ziel 1,00) · ${Math.round(xh / P * 100)} % der Zeilenhöhe (Ziel ${Math.round(100 / P)} %)${mmBand ? ` · ≈ ${fmt(xh * mmBand, 1)} mm` : ''}`,
+      xh < 1 ? 'Deine Schrift ist sehr flach. Schreibe die kleinen Buchstaben höher – dann bleiben n, u, m und e gut zu unterscheiden.'
+        : 'Deine Schrift ist zu groß für die Zeile. Schreibe kleiner, damit Ober- und Unterlängen Platz haben.');
+    if (xh < 0.6) capAt(60, 'Die Schrift ist so flach, dass Buchstaben verschwimmen und schwer zu lesen sind.');
+  } else if (xh != null && mmBand) {
+    const sc = crit.find(x => x.key === 'size'); if (sc) sc.value += ` · ≈ ${fmt(xh * mmBand, 1)} mm`;
+  }
+  const xr = xh != null ? clamp(xh, 0.4, 2) : 1;
+  // Zusammenstoßen mit der Nachbarzeile: Unterlängen der einen Zeile treffen Oberlängen (oder Mittelband) der nächsten
+  const rowsUsed = [...new Set(main.map(st => st.ri))].sort((a, b) => a - b);
+  if (rowsUsed.length >= 2) {
+    let hits = 0, pairs = 0;
+    for (const r of rowsUsed) {
+      if (!rowsUsed.includes(r + 1)) continue;
+      pairs++;
+      const g1 = rowGeom(r, cfg), g2 = rowGeom(r + 1, cfg);
+      const lowPts = main.filter(st => st.ri === r).flatMap(st => st.rs.filter(q => q.y > g1.base + 0.3));
+      const highPts = main.filter(st => st.ri === r + 1).flatMap(st => st.rs.filter(q => q.y < g2.mid - 0.2));
+      const sub = (A, n) => A.filter((_, i) => i % Math.max(1, Math.ceil(A.length / n)) === 0);
+      const A = sub(lowPts, 150), B = sub(highPts, 150), used = new Set();
+      for (const a of A) for (let j = 0; j < B.length; j++) {
+        if (used.has(j)) continue;
+        if (Math.hypot(a.x - B[j].x, a.y - B[j].y) < 0.12) { hits++; for (let k = 0; k < B.length; k++) if (Math.abs(B[k].x - B[j].x) < 0.6) used.add(k); break; }
+      }
+      // ganz in die nächste Zeile hineingeschrieben (unter deren Mittellinie)
+      if (lowPts.some(q => q.y > g2.mid + 0.2)) hits++;
+    }
+    if (hits >= 2) capAt(75, 'Die Zeilen stoßen zusammen – das macht den Text schwer lesbar.');
+    if (pairs) add('lines', 'Platz zwischen den Zeilen', 100 - hits * 30,
+      hits ? `${hits}× stoßen Ober- und Unterlängen an die Nachbarzeile` : 'Zeilen berühren sich nicht',
+      hits ? 'Ober- und Unterlängen stoßen an die Nachbarzeile. Schreibe die Längen etwas kürzer – oder die ganze Schrift etwas kleiner.' : null);
+  }
+  // Wortabstände (beim freien Schreiben): Lücken zwischen den Tintenblöcken einer Zeile, gemessen am Mittelband
+  if (c.mode === 'free') {
+    const gaps = []; let width = 0;
+    for (const r of rowsUsed) {
+      const iv = main.filter(st => st.ri === r).map(st => [st.minX, st.maxX]).sort((a, b) => a[0] - b[0]);
+      let cur = iv[0].slice();
+      for (const [a, b] of iv.slice(1)) { if (a <= cur[1] + 0.05) cur[1] = Math.max(cur[1], b); else { gaps.push(a - cur[1]); cur = [a, b]; } }
+      width += Math.max(...iv.map(v => v[1])) - iv[0][0];
+    }
+    const wg = gaps.filter(g => g > 0.45 * xr);
+    if (width > 8 * xr) {
+      if (!wg.length) capAt(80, 'Ohne Lücken zwischen den Wörtern ist der Text schwer zu lesen.');
+      if (!wg.length) add('space', 'Wortabstände', 30, 'kaum Lücken zwischen den Wörtern', 'Lass zwischen den Wörtern eine Lücke, etwa so breit wie ein „o“.');
+      else {
+        const g = mean(wg) / xr, cv = wg.length >= 3 ? sd(wg) / mean(wg) : 0;
+        const sc = (g < 0.7 ? 100 - (0.7 - g) / 0.7 * 160 : g > 2 ? 100 - (g - 2) / 2 * 120 : 100) - Math.max(0, cv - 0.5) * 60;
+        add('space', 'Wortabstände', sc, `Ø ${fmt(g, 1)} Mittelbänder breit (Ziel etwa 0,7–2, so breit wie ein „o“)${wg.length >= 3 ? ` · Schwankung ±${Math.round(cv * 100)} %` : ''}`,
+          g < 0.7 ? 'Deine Wörter stehen sehr eng. Lass eine Lücke, etwa so breit wie ein „o“.' : g > 2 ? 'Die Lücken zwischen den Wörtern sind sehr groß. Etwa ein „o“ breit reicht.' : cv > 0.6 ? 'Mach die Lücken zwischen den Wörtern gleichmäßiger.' : null);
+      }
+    }
+  }
+
+  const W = { space: 0.8, lines: 0.8, form: 3, fit: 1.5, extent: 1.2, extentU: 1.2, prop: 1, cons: 1, tremor: 1, straight: 1, base: 1, size: 1, slant: 0.6, flu: 0.5, pressure: 0.5, pvar: 0.4, tempo: 0.5, rhythm: 0.7, struct: 0.7, dir: 0.5 };
   // Deutliche Mängel begrenzen den Gesamtwert – sie lassen sich nicht durch andere Stärken ausgleichen
   const cs = k => { const x = crit.find(v => v.key === k); return x ? x.score : null; };
   if (cs('tremor') != null && cs('tremor') < 50) capAt(70, 'Die Linie zittert deutlich.');
