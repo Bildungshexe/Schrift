@@ -595,6 +595,31 @@
         </div>
       </div>
       <div class="card">
+        <span class="label">🖨️ Berichte zum Ausdrucken (A4)</span>
+        <div class="grid2">
+          <div>
+            <p class="small" style="margin-top:0"><b>Förderbericht:</b> Stärken, die wichtigsten Übungsfelder mit Übungstipps, Buchstaben mit Übungsbedarf und Platz für Bemerkungen.</p>
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <button class="btn" id="supportPreviewBtn" type="button">Vorschau</button>
+              <button class="btn btn-primary" id="supportPrintBtn" type="button">🖨️ Förderbericht drucken</button>
+            </div>
+            <p class="small" style="margin-top:14px"><b>Elternbericht:</b> Entwicklung vorher → jetzt, Verlauf, Schriftproben und Tipps für zu Hause.</p>
+            <label class="field"><span>Vergleich</span>
+              <select class="input" id="reportPeriod">
+                <option value="first">Anfang und jetzt (erste und letzte Übungen)</option>
+                <option value="weeks">letzte 4 Wochen mit den 4 Wochen davor</option>
+              </select>
+            </label>
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <button class="btn" id="parentPreviewBtn" type="button">Vorschau</button>
+              <button class="btn btn-primary" id="parentPrintBtn" type="button">🖨️ Elternbericht drucken</button>
+            </div>
+            <p class="small muted">Gewertet werden nur echte Schreibversuche – Nachspuren mit Spurhilfe zählt nicht. Druckeinstellung: A4, Skalierung 100 %.</p>
+          </div>
+          <div class="ws-preview" id="reportPreview"></div>
+        </div>
+      </div>
+      <div class="card">
         <div class="row" style="justify-content:space-between">
           <span class="label" style="margin:0">Letzte Übungen</span>
           <button class="btn btn-danger" id="clearHistoryBtn" type="button">Protokoll löschen</button>
@@ -3361,6 +3386,222 @@ function buildWorksheet() {
   saveState();
   return cv;
 }
+/* ==========================================================================
+   11b. BERICHTE ZUM AUSDRUCKEN (A4, Schrift ≥ 11 pt, ganze Seite)
+   Förderbericht: Probleme mit Übungstipps · Elternbericht: Entwicklung vorher/jetzt
+   ========================================================================== */
+// Kriterium → Name, Übungstipp (Schule und zu Hause)
+const CRIT_INFO = {
+  form: ['Form der Buchstaben', 'Den Buchstaben groß in die Luft, auf den Tisch oder in Sand schreiben, dann im Heft dreimal langsam und einmal locker.'],
+  fit: ['Größe und Lage auf der Linie', 'Das Mittelband mit Textmarker anmalen: Kleine Buchstaben füllen es genau aus, Längen ragen hinaus.'],
+  base: ['Auf der Grundlinie schreiben', 'Die Grundlinie mit einem dicken Stift nachziehen. Jeder Buchstabe „sitzt“ auf ihr wie auf einer Bank.'],
+  size: ['Gleichmäßige Höhe', 'Reihen gleicher kleiner Buchstaben schreiben (n n n, m m m) und darauf achten, dass alle gleich hoch sind.'],
+  extent: ['Ober- und Unterlängen', 'Längen-Buchstaben im Vierliniensystem üben: b, d, h, k, l nach oben, g, j, p, q, y nach unten.'],
+  extentU: ['Unterlängen', 'g, j, p, q und y bis zur Unterlinie ziehen – nicht kürzer, nicht länger.'],
+  prop: ['Proportionen', 'Breite Buchstaben (m, w) und schmale (i, l) nebeneinander schreiben und vergleichen.'],
+  cons: ['Gleichmaß zwischen den Buchstaben', 'Ein Wort dreimal untereinander schreiben: Sind alle Buchstaben gleich groß und gleich breit?'],
+  struct: ['Schlaufen und Bögen', 'Schwungübungen auf großem Papier: Schlaufenreihen (l l l, e e e) und Bögen (u u u, n n n).'],
+  straight: ['Gerade Abstriche', 'Abstriche bewusst von oben nach unten ziehen, wie Zaunlatten – ruhig und gerade.'],
+  slant: ['Gleichmäßige Neigung', 'Ein paar schräge Hilfslinien ins Heft zeichnen oder das Blatt etwas drehen, bis die Abstriche parallel stehen.'],
+  dir: ['Bewegungsrichtung', 'In der App „▶ Bewegung“ anschauen und mit dem Finger nachfahren. Rundungen laufen gegen den Uhrzeigersinn.'],
+  tremor: ['Ruhige Linie', 'Vor dem Schreiben Hände lockern; große Schwungübungen (Wellen, Girlanden) mit lockerem Arm.'],
+  flu: ['Flüssiges Schreiben', 'Kurze Wörter ohne Absetzen schreiben; Schwungübungen im Takt, etwa zum Klatschen oder zu Musik.'],
+  tempo: ['Schreibtempo', 'Einen kurzen Satz dreimal schreiben: erst langsam und genau, dann etwas schneller – die Form soll bleiben.'],
+  rhythm: ['Gleichmäßiger Rhythmus', 'Girlanden und Wellen im gleichmäßigen Takt schreiben, dabei leise mitzählen.'],
+  pressure: ['Lockerer Druck', 'Den Stift locker halten (Dreipunktgriff). Probe: Auf der Rückseite des Blattes soll kaum etwas durchgedrückt sein.'],
+  pvar: ['Gleichmäßiger Druck', 'Lange Linien und Wellen mit immer gleichem, leichtem Druck ziehen.'],
+  lines: ['Platz zwischen den Zeilen', 'Ober- und Unterlängen etwas kürzer schreiben, damit sie die Nachbarzeile nicht berühren.'],
+  space: ['Wortabstände', 'Nach jedem Wort eine Lücke so breit wie ein „o“ lassen – am Anfang mit dem Finger als Abstandshalter.']
+};
+const critName = k => (CRIT_INFO[k] || [k])[0];
+// Für Berichte zählen nur echte Schreibversuche: ohne Nachspuren, ohne Selbsteinschätzung auf Papier
+function reportAttempts(u) {
+  return u.history.filter(h => h.mode !== 'paper' && !h.g && isObj(h.m) && Number.isFinite(h.score)).slice().sort((a, b) => a.ts - b.ts);
+}
+function critAvg(list) {
+  const acc = {};
+  for (const h of list) for (const [k, v] of Object.entries(h.m)) if (CRIT_INFO[k] && Number.isFinite(v)) (acc[k] || (acc[k] = [])).push(v);
+  return Object.fromEntries(Object.entries(acc).map(([k, a]) => [k, { avg: Math.round(mean(a)), n: a.length }]));
+}
+const dmy = ts => new Date(ts).toLocaleDateString('de-DE');
+const RC = { ink: '#1f2a44', muted: '#5d6b86', ok: '#0f9d6b', mid: '#d08a00', bad: '#d93a3a', soft: '#f1f4fb', accent: '#5636d9', line: '#c9d3e3' };
+const scoreCol = s => s >= 75 ? RC.ok : s >= 50 ? RC.mid : RC.bad;
+
+// Seite anlegen und Zeichenhilfen (Maße in mm, Schrift in pt)
+function reportPage() {
+  const cv = document.createElement('canvas'); cv.width = 210 * K; cv.height = 297 * K;
+  const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  const font = (pt, bold) => { ctx.font = `${bold ? 'bold ' : ''}${pt * PT}px ${SYS_SANS}`; };
+  const text = (t, x, y, pt = 12, o = {}) => { font(pt, o.bold); ctx.fillStyle = o.color || RC.ink; ctx.textAlign = o.align || 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(t, x * K, y * K); ctx.textAlign = 'left'; };
+  // Text umbrechen; gibt die y-Position unter dem Absatz zurück
+  const para = (t, x, y, w, pt = 12, o = {}) => {
+    font(pt, o.bold); const lh = pt * 0.3528 * 1.4, words = String(t).split(' '); let line = '';
+    for (const wd of words) {
+      const test = line ? line + ' ' + wd : wd;
+      if (ctx.measureText(test).width > w * K && line) { text(line, x, y, pt, o); y += lh; line = wd; } else line = test;
+    }
+    if (line) { text(line, x, y, pt, o); y += lh; }
+    return y;
+  };
+  const box = (x, y, w, h, fill, r = 3) => { ctx.fillStyle = fill; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x * K, y * K, w * K, h * K, r * K); else ctx.rect(x * K, y * K, w * K, h * K); ctx.fill(); };
+  const hline = (x0, x1, y, col = RC.line, lw = 0.3) => { ctx.strokeStyle = col; ctx.lineWidth = lw * K; ctx.beginPath(); ctx.moveTo(x0 * K, y * K); ctx.lineTo(x1 * K, y * K); ctx.stroke(); };
+  const footer = note => { hline(15, 195, 284, RC.line); text(note, 105, 290, 11, { color: RC.muted, align: 'center' }); };
+  return { cv, ctx, text, para, box, hline, footer };
+}
+// Schriftprobe (wie in „Vorher – Nachher“) in ein Rechteck zeichnen
+function drawSampleBox(ctx, sample, x, y, w, h) {
+  ctx.fillStyle = PAPER; ctx.fillRect(x * K, y * K, w * K, h * K);
+  const cfg = lineCfg(), P = cfg.asc + 1 + cfg.desc + 0.4;
+  let scale = h * K / P; if (sample && sample.w * scale > w * K - 4 * K) scale = (w * K - 4 * K) / sample.w;
+  const tf = { scale, ox: x * K + 2 * K, oy: y * K + (h * K - (cfg.asc + 1 + cfg.desc) * scale) / 2 };
+  const row = { top: 0, mid: cfg.asc, base: cfg.asc + 1, bottom: cfg.asc + 1 + cfg.desc };
+  drawRowLines(ctx, tf, row, x * K, (x + w) * K, { band: '#f2f2f2', thin: '#b5b5b5', mid: '#8a8a8a', base: '#333', w: 0.2 * K, wb: 0.35 * K }, '3');
+  if (sample && validTpl(sample)) drawTemplate(ctx, sample, 0, row.base, tf, '#1e3a8a', Math.max(2, scale * 0.06));
+}
+
+// ---------- Förderbericht: Stärken, Probleme, Übungstipps ----------
+function buildSupportReport() {
+  const u = getActiveUser(), all = reportAttempts(u), recent = all.slice(-20);
+  const pg = reportPage(), { text, para, box, hline, footer } = pg;
+  text(`Schreibbericht: ${u.name}`, 15, 22, 22, { bold: true, color: RC.accent });
+  text(`erstellt am ${dmy(Date.now())}`, 195, 22, 11, { color: RC.muted, align: 'right' });
+  if (!recent.length) {
+    para('Für diesen Bericht gibt es noch keine ausgewerteten Übungen. Bitte zuerst im Schreib-Studio üben (ohne Spurhilfe).', 15, 40, 180, 13);
+    footer('SchreibFlow · Richtwerte aus der Strichanalyse – keine Note'); return pg.cv;
+  }
+  const avg = Math.round(mean(recent.map(h => h.score))), days = new Set(all.map(h => dayKey(new Date(h.ts)))).size;
+  text(`Grundlage: die letzten ${recent.length} Übungen (${dmy(recent[0].ts)} – ${dmy(recent[recent.length - 1].ts)}) · insgesamt ${all.length} Übungen an ${days} Tagen`, 15, 30, 11, { color: RC.muted });
+  // Gesamtwert
+  box(15, 35, 180, 22, RC.soft);
+  text(String(avg), 33, 51.5, 34, { bold: true, color: scoreCol(avg), align: 'center' });
+  para(avg >= 75 ? 'Die Schrift ist schon sauber und gut lesbar. Jetzt geht es um Tempo und Ausdauer.'
+    : avg >= 50 ? 'Auf einem guten Weg: Einiges klappt schon sicher, einige Punkte brauchen noch gezielte Übung.'
+    : 'Die Schrift braucht noch viel Übung. Am besten immer nur an einem Punkt gleichzeitig arbeiten.', 52, 44, 138, 13);
+  // Alle Kriterien als Balken (schwächste oben)
+  const ca = Object.entries(critAvg(recent)).filter(([, v]) => v.n >= 2).sort((a, b) => a[1].avg - b[1].avg);
+  let y = 67; text('Alle Bereiche im Überblick (0–100, ab 75 sicher)', 15, y, 15, { bold: true }); y += 5;
+  const rowH = Math.min(7.2, 82 / Math.max(1, ca.length));
+  for (const [k, v] of ca) {
+    text(critName(k), 15, y + rowH * 0.68, 12);
+    box(85, y + rowH * 0.18, 95, rowH * 0.62, RC.soft, 1.5);
+    box(85, y + rowH * 0.18, 95 * v.avg / 100, rowH * 0.62, scoreCol(v.avg), 1.5);
+    text(String(v.avg), 195, y + rowH * 0.68, 12, { bold: true, align: 'right', color: scoreCol(v.avg) });
+    y += rowH;
+  }
+  // Die drei wichtigsten Übungsfelder
+  y += 10; text('Die wichtigsten Übungsfelder – mit Übungstipps', 15, y, 15, { bold: true }); y += 7;
+  const weak = ca.filter(([, v]) => v.avg < 75).slice(0, 3);
+  if (!weak.length) y = para('Kein Bereich liegt unter 75 – weiter so! Als nächster Schritt: zügiger schreiben und längere Texte üben.', 15, y, 180, 12);
+  weak.forEach(([k, v], i) => {
+    const y0 = y; box(15, y0 - 5, 180, 22, i === 0 ? '#fff4e0' : RC.soft);
+    text(`${i + 1}. ${critName(k)} (${v.avg})`, 19, y0 + 0.5, 13, { bold: true, color: scoreCol(v.avg) });
+    para('Übung: ' + CRIT_INFO[k][1], 19, y0 + 6.5, 172, 12);
+    y = y0 + 25;
+  });
+  // Buchstaben mit Übungsbedarf
+  const ls = Object.entries(u.letterStats).filter(([, s]) => s.n >= 1).map(([ch, s]) => [ch, Math.round(s.sum / s.n), s.n]).sort((a, b) => a[1] - b[1]);
+  const weakL = ls.filter(l => l[1] < 75).slice(0, 8);
+  y += 2; text('Buchstaben, die noch Übung brauchen', 15, y, 15, { bold: true }); y += 6.5;
+  y = para(weakL.length ? weakL.map(([ch, a, n]) => `${ch} (Ø ${a}, ${n}×)`).join(' · ') : 'Alle geübten Buchstaben liegen bei 75 oder darüber.', 15, y, 180, 13);
+  // Bemerkungen bis zum Seitenende
+  y += 4; text('Bemerkungen', 15, y, 15, { bold: true }); y += 9;
+  for (; y < 280; y += 9) hline(15, 195, y);
+  footer('SchreibFlow · Richtwerte aus der Strichanalyse ohne Nachspur-Versuche – keine Note');
+  return pg.cv;
+}
+
+// ---------- Elternbericht: Entwicklung vorher → jetzt ----------
+function reportPeriods(all, mode) {
+  if (mode === 'weeks') {
+    const now = Date.now(), w4 = 28 * DAY_MS;
+    return { a: all.filter(h => h.ts >= now - 2 * w4 && h.ts < now - w4), b: all.filter(h => h.ts >= now - w4), what: 'die letzten 4 Wochen mit den 4 Wochen davor' };
+  }
+  const n = Math.min(10, Math.floor(all.length / 2));
+  return { a: all.slice(0, n), b: all.slice(-n), what: `die ersten ${n} mit den letzten ${n} Übungen` };
+}
+function buildParentReport(mode = 'first') {
+  const u = getActiveUser(), all = reportAttempts(u), per = reportPeriods(all, mode);
+  const pg = reportPage(), { ctx, text, para, box, hline, footer } = pg;
+  text(`Die Handschrift von ${u.name}`, 15, 22, 22, { bold: true, color: RC.accent });
+  text(`Stand ${dmy(Date.now())}`, 195, 22, 11, { color: RC.muted, align: 'right' });
+  let y = para(`Liebe Eltern, im Unterricht übt ${u.name} die Handschrift mit der App „SchreibFlow“. Die App wertet jede Übung aus (0–100 Punkte). Dieser Bericht vergleicht ${per.what}.`, 15, 31, 180, 12);
+  if (per.a.length < 2 || per.b.length < 2) {
+    para('Für einen Vergleich gibt es noch zu wenige ausgewertete Übungen (mindestens 4). Bitte später erneut drucken.', 15, y + 6, 180, 13, { bold: true });
+    footer('SchreibFlow · Richtwerte der App – sie ersetzen nicht die Einschätzung der Lehrkraft'); return pg.cv;
+  }
+  // Gesamttrend
+  const sa = Math.round(mean(per.a.map(h => h.score))), sb = Math.round(mean(per.b.map(h => h.score))), d = sb - sa;
+  const trend = d >= 5 ? ['▲', 'verbessert', RC.ok] : d <= -5 ? ['▼', 'verschlechtert', RC.bad] : ['●', 'etwa gleich geblieben', RC.mid];
+  y += 3; box(15, y, 180, 26, RC.soft);
+  text('vorher', 30, y + 8, 12, { color: RC.muted, align: 'center' }); text(String(sa), 30, y + 20, 26, { bold: true, color: scoreCol(sa), align: 'center' });
+  text('→', 50, y + 18, 22, { color: RC.muted, align: 'center' });
+  text('jetzt', 70, y + 8, 12, { color: RC.muted, align: 'center' }); text(String(sb), 70, y + 20, 26, { bold: true, color: scoreCol(sb), align: 'center' });
+  text(`${trend[0]} ${trend[1]}`, 88, y + 12, 16, { bold: true, color: trend[2] });
+  text(`${d > 0 ? '+' : ''}${d} Punkte im Durchschnitt`, 88, y + 20, 12, { color: RC.muted });
+  y += 33;
+  // Verlauf: Wochenmittel (bei wenigen Wochen: einzelne Übungen)
+  text('Verlauf', 15, y, 15, { bold: true }); y += 3;
+  const wk = {}; for (const h of all) { const dt = new Date(h.ts); dt.setHours(0, 0, 0, 0); dt.setDate(dt.getDate() - (dt.getDay() + 6) % 7); (wk[+dt] || (wk[+dt] = [])).push(h.score); }
+  let pts = Object.entries(wk).map(([t, a]) => [Number(t), mean(a)]).sort((p, q) => p[0] - q[0]), lbl = 'Wochendurchschnitt';
+  if (pts.length < 3) { pts = all.slice(-20).map(h => [h.ts, h.score]); lbl = 'einzelne Übungen'; }
+  const cx = 27, cw = 165, cy = y + 2, ch = 34;
+  for (const v of [0, 25, 50, 75, 100]) { const yy = cy + ch * (1 - v / 100); hline(cx, cx + cw, yy, v === 75 ? '#9bd3bd' : '#e3e8f1', v === 75 ? 0.5 : 0.25); text(String(v), cx - 2, yy + 1.4, 11, { color: RC.muted, align: 'right' }); }
+  const X = i => cx + (pts.length === 1 ? cw / 2 : cw * i / (pts.length - 1)), Y = v => cy + ch * (1 - v / 100);
+  ctx.strokeStyle = RC.accent; ctx.lineWidth = 0.8 * K; ctx.lineJoin = 'round'; ctx.beginPath();
+  pts.forEach(([, v], i) => (i ? ctx.lineTo(X(i) * K, Y(v) * K) : ctx.moveTo(X(i) * K, Y(v) * K))); ctx.stroke();
+  pts.forEach(([, v], i) => { ctx.fillStyle = scoreCol(v); ctx.beginPath(); ctx.arc(X(i) * K, Y(v) * K, 1.3 * K, 0, 7); ctx.fill(); });
+  text(dmy(pts[0][0]), cx, cy + ch + 6, 11, { color: RC.muted });
+  text(`${lbl} · grüne Linie = 75 (sicher)`, cx + cw / 2, cy + ch + 6, 11, { color: RC.muted, align: 'center' });
+  text(dmy(pts[pts.length - 1][0]), cx + cw, cy + ch + 6, 11, { color: RC.muted, align: 'right' });
+  y = cy + ch + 16;
+  // Bereiche vorher/jetzt
+  const ca = critAvg(per.a), cb = critAvg(per.b);
+  const rows = Object.keys(cb).filter(k => ca[k] && ca[k].n >= 2 && cb[k].n >= 2).map(k => [k, ca[k].avg, cb[k].avg]).sort((p, q) => (q[2] - q[1]) - (p[2] - p[1])).slice(0, 9);
+  text('Die einzelnen Bereiche', 15, y, 15, { bold: true }); text('vorher', 128, y, 11, { color: RC.muted, align: 'center' }); text('jetzt', 150, y, 11, { color: RC.muted, align: 'center' }); y += 6.5;
+  for (const [k, a, b] of rows) {
+    const dd = b - a, t = dd >= 5 ? ['▲ besser', RC.ok] : dd <= -5 ? ['▼ schwächer', RC.bad] : ['● gleich', RC.mid];
+    text(critName(k), 15, y, 12); text(String(a), 128, y, 12, { align: 'center' }); text(String(b), 150, y, 12, { bold: true, align: 'center', color: scoreCol(b) });
+    text(t[0], 165, y, 12, { bold: true, color: t[1] }); y += 5.9;
+  }
+  // Schriftproben vorher/nachher
+  const sl = Object.entries(u.samples).filter(([, s]) => s.first && s.latest && s.first.ts !== s.latest.ts)
+    .sort((p, q) => ((u.letterStats[q[0]] || {}).n || 0) - ((u.letterStats[p[0]] || {}).n || 0)).slice(0, 2);
+  if (sl.length) {
+    y += 3; text('Schriftproben: erster und letzter Versuch', 15, y, 15, { bold: true }); y += 3;
+    for (const [ch, s] of sl) {
+      text(ch, 15, y + 11, 18, { bold: true, color: RC.accent });
+      drawSampleBox(ctx, s.first, 24, y, 82, 22); drawSampleBox(ctx, s.latest, 112, y, 82, 22);
+      text(`erster Versuch · ${dmy(s.first.ts)} · ${s.first.score}`, 24, y + 26, 11, { color: RC.muted }); text(`letzter Versuch · ${dmy(s.latest.ts)} · ${s.latest.score}`, 112, y + 26, 11, { color: RC.muted });
+      y += 31;
+    }
+  }
+  // Tipps für zu Hause
+  const weak = Object.entries(cb).filter(([, v]) => v.n >= 2 && v.avg < 75).sort((p, q) => p[1].avg - q[1].avg).slice(0, 2);
+  y += 3; text('So können Sie zu Hause unterstützen', 15, y, 15, { bold: true }); y += 6.5;
+  if (weak.length) for (const [k] of weak) y = para(`• ${critName(k)}: ${CRIT_INFO[k][1]}`, 15, y, 180, 12) + 1;
+  else y = para('• Loben Sie die saubere Schrift und lassen Sie Ihr Kind ab und zu kurze Texte (Einkaufszettel, Kartengrüße) von Hand schreiben.', 15, y, 180, 12) + 1;
+  y = para('• Kurz und regelmäßig üben (5–10 Minuten) bringt mehr als selten und lange.', 15, y, 180, 12);
+  // Unterschriften am Seitenende
+  const ys = 277;
+  if (y < ys - 5) { hline(15, 95, ys, RC.ink, 0.3); hline(115, 195, ys, RC.ink, 0.3); text('Lehrkraft', 15, ys + 4.5, 11, { color: RC.muted }); text('Kenntnis genommen (Eltern)', 115, ys + 4.5, 11, { color: RC.muted }); }
+  footer('SchreibFlow · Richtwerte der App – sie ersetzen nicht die Einschätzung der Lehrkraft');
+  return pg.cv;
+}
+function showReport(kind, andPrint) {
+  const cv = kind === 'parent' ? buildParentReport($('reportPeriod').value) : buildSupportReport();
+  cv.toBlob(blob => {
+    if (!blob) { toast('Der Bericht konnte nicht erzeugt werden.'); return; }
+    const url = URL.createObjectURL(blob);
+    const old = $('printImg').src; if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+    $('printImg').src = url;
+    $('reportPreview').replaceChildren(el('img', { src: url, alt: 'Vorschau Bericht' }));
+    if (andPrint) {
+      const go = () => setTimeout(() => window.print(), 50);
+      if ($('printImg').complete) go(); else $('printImg').onload = () => { $('printImg').onload = null; go(); };
+    }
+  }, 'image/png');
+}
+
 function showWorksheet(andPrint) {
   const cv = buildWorksheet();
   cv.toBlob(blob => {
@@ -4476,6 +4717,10 @@ function init() {
   if (appData.security.enabled) lockApp();
   initStudio(); initAlphabet(); initUsers(); initGamification();
   $('sampleSelect').addEventListener('change', renderThumbs);
+  $('supportPreviewBtn').addEventListener('click', () => showReport('support', false));
+  $('supportPrintBtn').addEventListener('click', () => showReport('support', true));
+  $('parentPreviewBtn').addEventListener('click', () => showReport('parent', false));
+  $('parentPrintBtn').addEventListener('click', () => showReport('parent', true));
   $('clearHistoryBtn').addEventListener('click', () => {
     const u = getActiveUser();
     if (!confirm(`Protokoll, Buchstaben-Statistik und Proben von „${u.name}“ löschen? Punkte bleiben erhalten.`)) return;

@@ -46,6 +46,10 @@ Wichtig:
 - **Spurhilfe ehrlich bewertet:** Nachspuren bringt nur wenige Tropfen und zählt nicht für den Fortschritt. In der Einstellung „automatisch“ verschwindet die Spurhilfe nach drei guten Versuchen je Buchstabe.
 - **Radierer:** einzelne Striche wegwischen; „Zurück“ nimmt den letzten Strich weg.
 - **Untergründe:** Papier (creme), weißes Blatt, kariertes Blatt (Kästchen 4/5/7/10 mm in echter Größe), Pergament, grüne Tafel und Schiefertafel (mit Kreide).
+- **Berichte zum Ausdrucken** (unter „Fortschritt“, A4):
+  - *Förderbericht:* Gesamtwert, alle Bereiche als Balken, die drei wichtigsten Übungsfelder mit Übungstipps, Buchstaben mit Übungsbedarf, Platz für Bemerkungen.
+  - *Elternbericht:* Entwicklung vorher → jetzt (erste/letzte Übungen oder die letzten 4 Wochen mit den 4 Wochen davor), Verlauf als Diagramm, Bereiche mit ▲/●/▼, Schriftproben erster und letzter Versuch, Tipps für zu Hause, Unterschriftszeilen.
+  - Gewertet werden nur echte Schreibversuche; Nachspuren mit Spurhilfe zählt nicht.
 - **Meine Schrift:** Form je Buchstabe wählen, eigene Formen und Klassen-Vorlagen vorschreiben.
 - **Begleiter:** Drache, Eule oder Fuchs reagieren beim Schreiben und nach der Auswertung. Er sitzt auf der Seite, die die Schreibhand nicht verdeckt: bei Rechtshändern links, bei Linkshändern rechts.
 - **Welten und Abzeichen:** Mit Tropfen sechs Welten aufbauen.
@@ -75,7 +79,7 @@ Hintergründe (`welt_*_hintergrund`) nicht freistellen, sondern als JPEG (ca. 12
 
 ## Tests
 
-Nach jeder Änderung prüfen 21 automatische Tests die App im Browser: Auswertung, Schriftbild auf der Zeile, Bewegungsablauf, Spurhilfe, Kinderansicht, Einstellungen pro Kind, Speicher, Radierer, Untergründe, Heft-Modus, Begleiter, Welten und Baum. Bei jedem Hochladen auf GitHub laufen sie automatisch (Reiter **Actions**; ein grüner Haken heißt bestanden).
+Nach jeder Änderung prüfen 22 automatische Tests die App im Browser: Auswertung, Schriftbild auf der Zeile, Bewegungsablauf, Spurhilfe, Kinderansicht, Einstellungen pro Kind, Speicher, Radierer, Untergründe, Heft-Modus, Begleiter, Welten und Baum. Bei jedem Hochladen auf GitHub laufen sie automatisch (Reiter **Actions**; ein grüner Haken heißt bestanden).
 
 Selbst ausführen (Node.js nötig):
 

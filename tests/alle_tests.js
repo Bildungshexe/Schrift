@@ -46,6 +46,7 @@ const EXPECT = {
     /riesige Lücken: .*space=[0-4]?\d /,
     /Heft 9 mm: .*≈ \d,\d mm/
   ],
+  berichte: [/leer: ok/, /Vorschau: true/, /Nachspuren gezählt: false/],
   radierer_untergruende: [/nach Radieren: 1 Strich\(e\), ausgewertet=false/],
   begleiter_seite: [/links-H: .*panel-right/, /Linksh\., Leiste links: .*Klassen lefty$/m]
 };
