@@ -206,6 +206,7 @@
     .thumbs canvas { width: 100%; height: 120px; background: var(--paper); border-radius: 10px; display: block; }
 
     /* Papier & Foto */
+    .ws-preview img + img { margin-top: 12px; }
     .ws-preview img { width: 100%; max-width: 520px; display: block; margin: 10px auto 0; border: 1px solid var(--line); background: #fff; }
     canvas.photo { width: 100%; height: auto; display: block; border-radius: 10px; margin-top: 8px; background: #000; }
     .q { margin: 10px 0; }
@@ -281,7 +282,8 @@
       #app, .toast { display: none !important; }
       html, body { height: auto; overflow: visible; background: #fff !important; }
       #printArea { display: block; }
-      #printImg { width: 210mm; height: 297mm; display: block; }
+      #printArea img { width: 210mm; height: 297mm; display: block; break-after: page; }
+      #printArea img:last-child { break-after: auto; }
     }
   </style>
 </head>
@@ -614,7 +616,13 @@
               <button class="btn" id="parentPreviewBtn" type="button">Vorschau</button>
               <button class="btn btn-primary" id="parentPrintBtn" type="button">🖨️ Elternbericht drucken</button>
             </div>
-            <p class="small muted">Gewertet werden nur echte Schreibversuche – Nachspuren mit Spurhilfe zählt nicht. Druckeinstellung: A4, Skalierung 100 %.</p>
+            <p class="small" style="margin-top:14px"><b>Lerngruppe (für Ihre Unterlagen):</b> Anzahl der Kinder, Entwicklung jedes Kindes und der ganzen Gruppe, Schwerpunkte für den Unterricht.</p>
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <button class="btn" id="groupPreviewBtn" type="button">Vorschau</button>
+              <button class="btn btn-primary" id="groupPrintBtn" type="button">🖨️ Gruppenbericht drucken</button>
+              <button class="btn" id="groupPdfBtn" type="button">PDF speichern</button>
+            </div>
+            <p class="small muted">Gewertet werden nur echte Schreibversuche – Nachspuren mit Spurhilfe zählt nicht. Der Vergleich oben gilt für Eltern- und Gruppenbericht. Druckeinstellung: A4, Skalierung 100 %.</p>
           </div>
           <div class="ws-preview" id="reportPreview"></div>
         </div>
@@ -766,6 +774,24 @@
             <input class="input" id="focusInput" style="flex:1" autocomplete="off">
             <button class="btn" id="focusSave" type="button">Speichern</button>
           </div>
+        </div>
+
+        <div class="card">
+          <h2>📄 Elternbrief: Information und Einwilligung</h2>
+          <p class="small">Informiert die Eltern über die App, den Datenschutz und die Speicherdauer und enthält eine Einwilligungserklärung zum Unterschreiben. Felder ausfüllen, Text bei Bedarf ändern, dann drucken oder als Word- bzw. PDF-Datei speichern.</p>
+          <div class="grid2" id="letterFields" style="gap:0 12px"></div>
+          <details style="margin:4px 0 10px"><summary class="small" style="cursor:pointer;min-height:32px">Brieftext bearbeiten (# Titel, ## Überschrift, - Aufzählung, [ ] Ankreuzfeld, ___ Unterschrift | Unterschrift, %% neue Seite, {{gruppe}} usw. = Felder)</summary>
+            <textarea class="input" id="letterText" rows="18" style="font-family:inherit;line-height:1.4;margin-top:6px"></textarea>
+            <button class="btn" id="letterResetBtn" type="button" style="margin-top:6px">Vorlage wiederherstellen</button>
+          </details>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn" id="letterPreviewBtn" type="button">Vorschau</button>
+            <button class="btn btn-primary" id="letterPrintBtn" type="button">🖨️ Drucken</button>
+            <button class="btn" id="letterDocxBtn" type="button">Word (.docx)</button>
+            <button class="btn" id="letterPdfBtn" type="button">PDF</button>
+          </div>
+          <p class="small muted">Bitte vor dem Versand von der/dem Datenschutzbeauftragten der Schule prüfen lassen.</p>
+          <div class="ws-preview" id="letterPreview"></div>
         </div>
 
         <div class="card">
@@ -1057,6 +1083,8 @@ function sanitizeState(raw) {
   sanitizeSettings(s.settings);
   s.library = isObj(raw.library) ? raw.library : {};
   s.lastWorksheet = isObj(raw.lastWorksheet) ? raw.lastWorksheet : null;
+  s.letter = isObj(raw.letter) && typeof raw.letter.text === 'string'
+    ? { text: raw.letter.text.slice(0, 20000), fields: isObj(raw.letter.fields) ? Object.fromEntries(Object.entries(raw.letter.fields).filter(([, v]) => typeof v === 'string').map(([k, v]) => [k, v.slice(0, 200)])) : {} } : null;
   if (isObj(raw.backup)) s.backup = { lastAt: num(raw.backup.lastAt, null), lastAutoDay: typeof raw.backup.lastAutoDay === 'string' ? raw.backup.lastAutoDay : null };
   const sec = raw.security;
   if (isObj(sec) && sec.enabled && typeof sec.hash === 'string' && typeof sec.salt === 'string' && typeof sec.recHash === 'string' && typeof sec.recSalt === 'string')
@@ -3588,34 +3616,291 @@ function buildParentReport(mode = 'first') {
   return pg.cv;
 }
 function showReport(kind, andPrint) {
-  const cv = kind === 'parent' ? buildParentReport($('reportPeriod').value) : buildSupportReport();
-  cv.toBlob(blob => {
-    if (!blob) { toast('Der Bericht konnte nicht erzeugt werden.'); return; }
-    const url = URL.createObjectURL(blob);
-    const old = $('printImg').src; if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
-    $('printImg').src = url;
-    $('reportPreview').replaceChildren(el('img', { src: url, alt: 'Vorschau Bericht' }));
-    if (andPrint) {
-      const go = () => setTimeout(() => window.print(), 50);
-      if ($('printImg').complete) go(); else $('printImg').onload = () => { $('printImg').onload = null; go(); };
-    }
-  }, 'image/png');
+  const cvs = kind === 'group' ? buildGroupReport($('reportPeriod').value) : [kind === 'parent' ? buildParentReport($('reportPeriod').value) : buildSupportReport()];
+  printPages(cvs, $('reportPreview'), andPrint);
 }
 
-function showWorksheet(andPrint) {
-  const cv = buildWorksheet();
-  cv.toBlob(blob => {
-    if (!blob) { toast('Das Arbeitsblatt konnte nicht erzeugt werden.'); return; }
-    const url = URL.createObjectURL(blob);
-    const old = $('printImg').src; if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
-    $('printImg').src = url;
-    const prev = $('wsPreview'); prev.replaceChildren(el('img', { src: url, alt: 'Vorschau Arbeitsblatt' }));
-    if (andPrint) {
-      const go = () => setTimeout(() => window.print(), 50);
-      if ($('printImg').complete) go(); else $('printImg').onload = () => { $('printImg').onload = null; go(); };
-    }
-  }, 'image/png');
+// Mehrere A4-Seiten (Canvas) als Bilder in den Druckbereich und die Vorschau legen
+function printPages(cvs, previewEl, andPrint) {
+  Promise.all(cvs.map(cv => new Promise(res => cv.toBlob(res, 'image/png')))).then(blobs => {
+    if (blobs.some(b => !b)) { toast('Die Seite konnte nicht erzeugt werden.'); return; }
+    const area = $('printArea');
+    for (const im of area.querySelectorAll('img')) if (im.src.startsWith('blob:')) URL.revokeObjectURL(im.src);
+    const urls = blobs.map(b => URL.createObjectURL(b));
+    const imgs = urls.map((u, i) => { const im = el('img', { src: u, alt: 'Seite ' + (i + 1) }); if (!i) im.id = 'printImg'; return im; });
+    area.replaceChildren(...imgs);
+    if (previewEl) previewEl.replaceChildren(...urls.map((u, i) => el('img', { src: u, alt: 'Vorschau Seite ' + (i + 1) })));
+    if (andPrint) Promise.all(imgs.map(im => im.complete ? 0 : new Promise(r => { im.onload = r; }))).then(() => setTimeout(() => window.print(), 50));
+  });
 }
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+const fileSafe = t => String(t).replace(/[^\wäöüÄÖÜß-]+/g, '_').replace(/^_+|_+$/g, '') || 'Datei';
+
+// PDF aus A4-Seitenbildern (JPEG) – ohne Bibliothek, funktioniert offline
+function pdfFromCanvases(cvs) {
+  const enc = new TextEncoder(), parts = [], offs = [];
+  let len = 0; const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const n = cvs.length, W = 595.28, H = 841.89;
+  // Objekte: 1 Katalog, 2 Seitenliste, je Seite: Seite, Bild, Inhalt
+  const obj = (id, body) => { offs[id] = len; push(`${id} 0 obj\n`); for (const b of [].concat(body)) push(b); push('\nendobj\n'); };
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, `<< /Type /Pages /Count ${n} /Kids [${cvs.map((_, i) => `${3 + i * 3} 0 R`).join(' ')}] >>`);
+  cvs.forEach((cv, i) => {
+    const p = 3 + i * 3, im = p + 1, ct = p + 2;
+    const jpg = Uint8Array.from(atob(cv.toDataURL('image/jpeg', 0.9).split(',')[1]), c => c.charCodeAt(0));
+    const cs = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+    obj(p, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>`);
+    obj(im, [`<< /Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`, jpg, '\nendstream']);
+    obj(ct, `<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`);
+  });
+  const total = 3 + n * 3, xref = len;
+  push(`xref\n0 ${total}\n0000000000 65535 f \n`);
+  for (let i = 1; i < total; i++) push(String(offs[i]).padStart(10, '0') + ' 00000 n \n');
+  push(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+
+// ZIP (ohne Kompression) für .docx – ohne Bibliothek
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zipStore(files) {
+  const enc = new TextEncoder(), out = [], central = []; let off = 0;
+  const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  for (const [name, text] of files) {
+    const nb = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+    const head = [...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(nb.length), ...u16(0)];
+    out.push(new Uint8Array(head), nb, data);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length),
+      ...u16(nb.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nb);
+    off += head.length + nb.length + data.length;
+  }
+  const csize = central.reduce((a, b) => a + b.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(csize), ...u32(off), ...u16(0)]);
+  return new Blob([...out, ...central, end], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+
+/* ---------- Lerngruppen-Bericht ---------- */
+function groupData(mode) {
+  return appData.users.map(u => {
+    const all = reportAttempts(u), per = reportPeriods(all, mode);
+    const ok = per.a.length >= 2 && per.b.length >= 2;
+    const sa = ok ? Math.round(mean(per.a.map(h => h.score))) : null, sb = ok ? Math.round(mean(per.b.map(h => h.score))) : null;
+    const cb = critAvg(per.b.length ? per.b : all.slice(-10));
+    const weak = Object.entries(cb).filter(([, v]) => v.n >= 2).sort((p, q) => p[1].avg - q[1].avg)[0];
+    return { u, n: all.length, days: new Set(all.map(h => dayKey(new Date(h.ts)))).size, sa, sb, d: ok ? sb - sa : null, weak: weak && weak[1].avg < 75 ? critName(weak[0]) : '–', per };
+  });
+}
+function buildGroupReport(mode = 'first') {
+  const rows = groupData(mode), withData = rows.filter(r => r.d != null), pages = [];
+  let pg = reportPage(), { text, para, box, hline, footer } = pg, y;
+  const groupName = (appData.letter && appData.letter.fields.gruppe) || 'Lerngruppe';
+  text(`Auswertung der Lerngruppe: ${groupName}`, 15, 22, 20, { bold: true, color: RC.accent });
+  text(`Stand ${dmy(Date.now())}`, 195, 22, 11, { color: RC.muted, align: 'right' });
+  text(mode === 'weeks' ? 'Vergleich: die letzten 4 Wochen mit den 4 Wochen davor' : 'Vergleich: die ersten 10 mit den letzten 10 Übungen je Kind', 15, 30, 11, { color: RC.muted });
+  // Kennzahlen
+  const up = withData.filter(r => r.d >= 5).length, down = withData.filter(r => r.d <= -5).length, same = withData.length - up - down;
+  const ga = withData.length ? Math.round(mean(withData.map(r => r.sa))) : null, gb = withData.length ? Math.round(mean(withData.map(r => r.sb))) : null;
+  const cards = [[String(rows.length), 'Schülerinnen und Schüler'], [String(withData.length), 'mit genug Übungen für einen Vergleich'],
+    [ga == null ? '–' : `${ga} → ${gb}`, 'Ø Gruppe vorher → jetzt'], [String(rows.reduce((a, r) => a + r.n, 0)), 'ausgewertete Übungen gesamt']];
+  cards.forEach(([v, l], i) => { const x = 15 + i * 45.5; box(x, 35, 43, 26, RC.soft); text(v, x + 21.5, 48, 20, { bold: true, align: 'center', color: i === 2 && gb != null ? scoreCol(gb) : RC.ink }); para(l, x + 3, 55, 37, 11, { color: RC.muted }); });
+  y = 70;
+  if (withData.length) {
+    const gd = gb - ga, t = gd >= 5 ? ['▲ Die Lerngruppe hat sich verbessert', RC.ok] : gd <= -5 ? ['▼ Die Lerngruppe hat sich verschlechtert', RC.bad] : ['● Die Lerngruppe ist etwa gleich geblieben', RC.mid];
+    text(`${t[0]} (${gd > 0 ? '+' : ''}${gd} Punkte)`, 15, y, 15, { bold: true, color: t[1] }); y += 7;
+    // Anteile als Balken
+    const W = 180, tot = withData.length; let x = 15;
+    for (const [cnt, col] of [[up, RC.ok], [same, RC.mid], [down, RC.bad]]) { if (cnt) { box(x, y, W * cnt / tot, 7, col, 1); } x += W * cnt / tot; }
+    y += 12; text(`▲ verbessert: ${up}   ● gleich: ${same}   ▼ verschlechtert: ${down}`, 15, y, 12); y += 9;
+    // Bereiche der Gruppe: Mittel der Kinder-Durchschnitte
+    const agg = (key) => { const acc = {}; for (const r of withData) for (const [k, v] of Object.entries(critAvg(r.per[key]))) if (v.n >= 2) (acc[k] || (acc[k] = [])).push(v.avg); return acc; };
+    const A = agg('a'), B = agg('b');
+    const cr = Object.keys(B).filter(k => A[k]).map(k => [k, Math.round(mean(A[k])), Math.round(mean(B[k]))]);
+    if (cr.length) {
+      const weakest = [...cr].sort((p, q) => p[2] - q[2]).slice(0, 3), best = [...cr].sort((p, q) => (q[2] - q[1]) - (p[2] - p[1])).slice(0, 3);
+      y = para('Größte Fortschritte der Gruppe: ' + best.map(([k, a, b]) => `${critName(k)} (${a} → ${b})`).join(', ') + '.', 15, y, 180, 12) + 1;
+      y = para('Schwerpunkte für den Unterricht: ' + weakest.map(([k, , b]) => `${critName(k)} (${b})`).join(', ') + '.', 15, y, 180, 12, { bold: true }) + 3;
+    }
+  } else { y = para('Für einen Vergleich braucht jedes Kind mindestens 4 ausgewertete Übungen (ohne Nachspuren).', 15, y, 180, 12) + 3; }
+  // Tabelle der Kinder
+  const cols = [[15, 'Name', 'left'], [80, 'Übungen', 'right'], [100, 'Tage', 'right'], [118, 'vorher', 'right'], [134, 'jetzt', 'right'], [150, 'Δ', 'right'], [154, 'Schwerpunkt', 'left']];
+  const head = () => { y += 2; for (const [x, t, al] of cols) text(t, x, y, 11, { bold: true, color: RC.muted, align: al }); y += 2; hline(15, 195, y, RC.ink, 0.3); y += 6; };
+  head();
+  const sorted = [...rows].sort((p, q) => (q.d ?? -999) - (p.d ?? -999));
+  sorted.forEach((r, i) => {
+    if (y > 276) { footer('SchreibFlow · Richtwerte der App ohne Nachspur-Versuche – nur für die Unterlagen der Lehrkraft'); pages.push(pg.cv);
+      pg = reportPage(); ({ text, para, box, hline, footer } = pg); text(`Auswertung der Lerngruppe: ${groupName} (Fortsetzung)`, 15, 20, 14, { bold: true, color: RC.accent }); y = 26; head(); }
+    if (i % 2 === 0) box(14, y - 4.6, 182, 6.4, '#f7f9fd', 0.5);
+    const t = r.d == null ? ['–', RC.muted] : r.d >= 5 ? ['▲ +' + r.d, RC.ok] : r.d <= -5 ? ['▼ ' + r.d, RC.bad] : ['● ' + (r.d > 0 ? '+' : '') + r.d, RC.mid];
+    text(r.u.name.slice(0, 26), 15, y, 12); text(String(r.n), 80, y, 12, { align: 'right' }); text(String(r.days), 100, y, 12, { align: 'right' });
+    text(r.sa == null ? '–' : String(r.sa), 118, y, 12, { align: 'right' }); text(r.sb == null ? '–' : String(r.sb), 134, y, 12, { bold: true, align: 'right', color: r.sb == null ? RC.ink : scoreCol(r.sb) });
+    text(t[0], 150, y, 12, { bold: true, color: t[1], align: 'right' }); text(r.weak, 154, y, 11, { color: RC.muted });
+    y += 6.4;
+  });
+  footer('SchreibFlow · Richtwerte der App ohne Nachspur-Versuche – nur für die Unterlagen der Lehrkraft'); pages.push(pg.cv);
+  return pages;
+}
+
+/* ---------- Elternbrief: Information und Einwilligung (bearbeitbar) ---------- */
+// Schreibweise: „# “ Titel, „## “ Zwischenüberschrift, „- “ Aufzählung, „[ ] “ Ankreuzfeld, „___ A | B“ Unterschriftszeilen,
+// „--- Text“ Abtrennlinie, „%%“ neue Seite, {{feld}} Platzhalter
+const LETTER_FIELDS = [['schule', 'Schule (Name und Anschrift)', 'Name der Schule, Straße, Ort'], ['gruppe', 'Lerngruppe / Klasse', 'z. B. 5b'],
+  ['lehrkraft', 'Lehrkraft', 'Name der Lehrkraft'], ['kontakt', 'Kontakt der Lehrkraft', 'E-Mail oder Telefon'],
+  ['dsb', 'Datenschutzbeauftragte/r der Schule', 'Name und Kontakt'], ['dauer', 'Speicherdauer', 'bis zum Ende des Schuljahres 2026/27']];
+const LETTER_TEMPLATE = `{{schule}}
+{{datum}}
+
+# Information und Einwilligung: Handschrift-Training mit der App „SchreibFlow“
+
+Liebe Eltern und Erziehungsberechtigte,
+
+in der Lerngruppe {{gruppe}} üben die Kinder ihre Handschrift auch am Tablet. Dafür nutzen wir die App „SchreibFlow“. Mit diesem Brief informieren wir Sie, welche Daten dabei entstehen, wozu sie dienen und wie sie geschützt werden. Für die Nutzung bitten wir um Ihre Einwilligung.
+
+## Ziel der Maßnahme
+Ihr Kind soll eine saubere, gut lesbare und ermüdungsfreie Handschrift entwickeln. Ausgehend von der gelernten Ausgangsschrift wählt jedes Kind die Buchstabenformen, die es am besten schreiben kann („Mix & Match“). Die App gibt beim Üben sofort Rückmeldung und zeigt, woran Ihr Kind gezielt arbeiten kann. So können wir jedes Kind individuell fördern.
+
+## Welche Daten entstehen – und warum
+- Vorname oder Kürzel Ihres Kindes, damit die Übungen zugeordnet werden können.
+- Die Schreibbewegungen auf dem Tablet: Lage der Striche, Schreibtempo und bei Stiften mit Sensor der Druck. Daraus wertet die App das Schriftbild aus: Form, Größe, Lage auf der Linie, Flüssigkeit und Bewegungsrichtung.
+- Auswertungswerte und Übungsverlauf, damit Fortschritte sichtbar werden und passende Übungen vorgeschlagen werden.
+- Einzelne Schriftproben (erster und letzter Versuch je Buchstabe) für den Vorher-Nachher-Vergleich.
+Es werden keine Fotos, Ton- oder Videoaufnahmen gespeichert. Die Daten dienen ausschließlich der Förderung im Unterricht und sind keine Grundlage für Noten.
+
+## Datenschutz
+- Die App arbeitet offline. Sie überträgt keine Daten über das Internet und nutzt weder eine Cloud noch Künstliche Intelligenz im Internet.
+- Alle Daten werden nur auf dem Schulgerät gespeichert und verlassen die Schule nicht.
+- Zugriff hat nur die Lehrkraft. Das Programm kann mit einem Passwort geschützt werden.
+- Die Daten werden vertraulich behandelt und nicht an Dritte weitergegeben.
+- Berichte zur Entwicklung Ihres Kindes erhalten nur Sie.
+Rechtsgrundlage ist Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).
+
+## Speicherdauer
+Die Daten werden {{dauer}} gespeichert und danach gelöscht, ebenso alle Sicherungsdateien. Verlässt Ihr Kind die Lerngruppe oder widerrufen Sie Ihre Einwilligung, löschen wir die Daten Ihres Kindes umgehend.
+
+## Freiwilligkeit und Ihre Rechte
+Die Teilnahme ist freiwillig. Wenn Sie nicht einwilligen, entsteht Ihrem Kind kein Nachteil; es übt dann auf Papier. Sie können Ihre Einwilligung jederzeit ohne Angabe von Gründen mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO). Sie haben das Recht auf Auskunft, Berichtigung und Löschung der Daten (Art. 15–17 DSGVO) sowie das Recht auf Beschwerde bei der Datenschutz-Aufsichtsbehörde (Art. 77 DSGVO).
+
+## Kontakt
+Lehrkraft: {{lehrkraft}}, {{kontakt}}
+Datenschutzbeauftragte/r der Schule: {{dsb}}
+
+Mit freundlichen Grüßen
+{{lehrkraft}}
+%%
+--- bitte abtrennen und an die Lehrkraft zurückgeben
+
+# Einwilligungserklärung zur App „SchreibFlow“
+Name des Kindes: ______________________________     Lerngruppe: {{gruppe}}
+
+[ ] Ich bin / Wir sind damit einverstanden, dass mein / unser Kind im Unterricht die App „SchreibFlow“ nutzt und dass dabei die Schreibbewegungen aufgenommen und das Schriftbild wie im Informationsschreiben beschrieben analysiert werden. Die Daten werden nur auf dem Schulgerät gespeichert, {{dauer}} aufbewahrt und danach gelöscht.
+[ ] Ich bin / Wir sind nicht einverstanden.
+
+Die Einwilligung ist freiwillig. Sie kann jederzeit ohne Angabe von Gründen mit Wirkung für die Zukunft widerrufen werden.
+
+___ Ort, Datum | Unterschrift Erziehungsberechtigte/r
+___ Ort, Datum | Unterschrift weitere/r Erziehungsberechtigte/r`;
+
+function letterState() {
+  if (!isObj(appData.letter)) appData.letter = { text: LETTER_TEMPLATE, fields: {} };
+  return appData.letter;
+}
+function letterLines() {
+  const L = letterState(), f = { ...L.fields, datum: new Date().toLocaleDateString('de-DE') };
+  // Leere Felder: Speicherdauer mit Vorschlag, alles andere als Linie zum Ausfüllen von Hand
+  return L.text.replace(/\{\{(\w+)\}\}/g, (m, k) => (f[k] && String(f[k]).trim()) || (k === 'dauer' ? 'bis zum Ende des Schuljahres 2026/27' : '____________________')).split('\n');
+}
+function letterBlocks() { // Zeilen → Blöcke {t: typ, s: text}
+  const out = []; let para = null;
+  for (const raw of letterLines()) {
+    const l = raw.trimEnd();
+    const blk = (t, s) => { para = null; out.push({ t, s }); };
+    if (!l.trim()) { para = null; out.push({ t: 'gap' }); }
+    else if (l.trim() === '%%') blk('page');
+    else if (l.startsWith('## ')) blk('h2', l.slice(3));
+    else if (l.startsWith('# ')) blk('h1', l.slice(2));
+    else if (l.startsWith('- ')) blk('li', l.slice(2));
+    else if (l.startsWith('[ ] ')) blk('box', l.slice(4));
+    else if (l.startsWith('___')) blk('sign', l.replace(/^_+\s*/, ''));
+    else if (l.startsWith('---')) blk('cut', l.replace(/^-+\s*/, ''));
+    else { out.push({ t: 'p', s: l }); para = 1; }
+  }
+  return out;
+}
+function buildLetterPages() {
+  const pages = []; let pg = reportPage(), y = 20; const X0 = 20, W = 170, BOTTOM = 280;
+  const next = () => { pages.push(pg.cv); pg = reportPage(); y = 20; };
+  const need = h => { if (y + h > BOTTOM) next(); };
+  // Höhe eines Absatzes vorab schätzen, damit er nicht über den Seitenrand läuft
+  const est = (s, w, pt) => { pg.ctx.font = `${pt * PT}px ${SYS_SANS}`; return Math.ceil(pg.ctx.measureText(s).width * 1.06 / (w * K)) * pt * 0.3528 * 1.4; };
+  for (const b of letterBlocks()) {
+    if (b.t === 'page') { next(); continue; }
+    if (b.t === 'gap') { y += 3; continue; }
+    if (b.t === 'h1') { need(14); y += 4; y = pg.para(b.s, X0, y + 3, W, 15, { bold: true, color: RC.accent }) + 1; continue; }
+    if (b.t === 'h2') { need(12); y += 3; y = pg.para(b.s, X0, y + 2, W, 12.5, { bold: true }) + 0.5; continue; }
+    if (b.t === 'li') { need(est(b.s, W - 6, 11.5)); pg.text('•', X0 + 1, y, 11.5); y = pg.para(b.s, X0 + 6, y, W - 6, 11.5) + 0.8; continue; }
+    if (b.t === 'box') { need(est(b.s, W - 8, 11.5) + 2); pg.ctx.strokeStyle = RC.ink; pg.ctx.lineWidth = 0.35 * K; pg.ctx.strokeRect((X0) * K, (y - 3.6) * K, 4.2 * K, 4.2 * K); y = pg.para(b.s, X0 + 8, y, W - 8, 11.5) + 2; continue; }
+    if (b.t === 'cut') { need(12); y += 2; pg.ctx.setLineDash([2 * K, 1.5 * K]); pg.hline(15, 195, y, RC.muted, 0.3); pg.ctx.setLineDash([]); pg.text('✂ ' + b.s, 105, y + 5, 11, { color: RC.muted, align: 'center' }); y += 12; continue; }
+    if (b.t === 'sign') { need(18); y += 12; const [l, r] = b.s.split('|').map(t => t.trim()); pg.hline(X0, X0 + 65, y, RC.ink, 0.3); pg.hline(X0 + 80, X0 + W, y, RC.ink, 0.3); pg.text(l || '', X0, y + 4.5, 11, { color: RC.muted }); pg.text(r || '', X0 + 80, y + 4.5, 11, { color: RC.muted }); y += 7; continue; }
+    need(est(b.s, W, 11.5)); y = pg.para(b.s, X0, y, W, 11.5) + 0.5;
+  }
+  pages.push(pg.cv);
+  return pages;
+}
+function letterDocx() {
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const run = (t, o = {}) => `<w:r><w:rPr>${o.b ? '<w:b/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}${o.sz ? `<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>` : ''}</w:rPr><w:t xml:space="preserve">${esc(t)}</w:t></w:r>`;
+  const p = (inner, ppr = '') => `<w:p><w:pPr>${ppr}</w:pPr>${inner}</w:p>`;
+  let body = '', pendingBreak = false;
+  for (const b of letterBlocks()) {
+    const pb = pendingBreak ? '<w:pageBreakBefore/>' : ''; if (b.t !== 'gap' && b.t !== 'page') pendingBreak = false;
+    if (b.t === 'page') { pendingBreak = true; continue; }
+    if (b.t === 'gap') { continue; }
+    if (b.t === 'h1') body += p(run(b.s, { b: 1, sz: 30, color: '5636D9' }), pb + '<w:keepNext/><w:spacing w:before="240" w:after="120"/>');
+    else if (b.t === 'h2') body += p(run(b.s, { b: 1, sz: 25 }), pb + '<w:keepNext/><w:spacing w:before="200" w:after="60"/>');
+    else if (b.t === 'li') body += p(run('•\t') + run(b.s), pb + '<w:tabs><w:tab w:val="left" w:pos="360"/></w:tabs><w:ind w:left="360" w:hanging="360"/><w:spacing w:after="60"/>');
+    else if (b.t === 'box') body += p(run('☐\t', { sz: 28 }) + run(b.s), pb + '<w:tabs><w:tab w:val="left" w:pos="480"/></w:tabs><w:ind w:left="480" w:hanging="480"/><w:spacing w:before="120" w:after="120"/>');
+    else if (b.t === 'cut') body += p(run('✂ - - - - - - - - ' + b.s + ' - - - - - - - -', { color: '5D6B86', sz: 22 }), pb + '<w:jc w:val="center"/><w:spacing w:after="240"/>');
+    else if (b.t === 'sign') { const [l, r] = b.s.split('|').map(t => t.trim());
+      body += p(run('______________________________\t______________________________'), pb + '<w:tabs><w:tab w:val="left" w:pos="4800"/></w:tabs><w:spacing w:before="600"/>');
+      body += p(run(l || '', { sz: 22, color: '5D6B86' }) + run('\t') + run(r || '', { sz: 22, color: '5D6B86' }), '<w:tabs><w:tab w:val="left" w:pos="4800"/></w:tabs>'); }
+    else body += p(run(b.s), pb + '<w:spacing w:after="80"/>');
+  }
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document ${W}><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="23"/><w:szCs w:val="23"/><w:lang w:val="de-DE"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>`;
+  return zipStore([
+    ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>'],
+    ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
+    ['word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+    ['word/document.xml', doc], ['word/styles.xml', styles]
+  ]);
+}
+function initLetter() {
+  const L = letterState(), box = $('letterFields');
+  for (const [k, label, ph] of LETTER_FIELDS) {
+    const inp = el('input', { class: 'input', placeholder: ph, autocomplete: 'off' }); inp.value = L.fields[k] || '';
+    inp.addEventListener('input', () => { letterState().fields[k] = inp.value.slice(0, 200); saveLater(); });
+    box.append(el('label', { class: 'field' }, el('span', { text: label }), inp));
+  }
+  const ta = $('letterText'); ta.value = L.text;
+  ta.addEventListener('input', () => { letterState().text = ta.value.slice(0, 20000); saveLater(); });
+  let tmr = null; const saveLater = () => { clearTimeout(tmr); tmr = setTimeout(saveState, 600); };
+  const name = () => 'Elternbrief_SchreibFlow' + (letterState().fields.gruppe ? '_' + fileSafe(letterState().fields.gruppe) : '');
+  $('letterPreviewBtn').addEventListener('click', () => printPages(buildLetterPages(), $('letterPreview'), false));
+  $('letterPrintBtn').addEventListener('click', () => printPages(buildLetterPages(), $('letterPreview'), true));
+  $('letterDocxBtn').addEventListener('click', () => { downloadBlob(letterDocx(), name() + '.docx'); toast('Word-Datei gespeichert.'); });
+  $('letterPdfBtn').addEventListener('click', () => { downloadBlob(pdfFromCanvases(buildLetterPages()), name() + '.pdf'); toast('PDF gespeichert.'); });
+  $('letterResetBtn').addEventListener('click', () => {
+    if (!confirm('Den Brieftext auf die Vorlage zurücksetzen? Ihre Änderungen am Text gehen verloren (die Felder oben bleiben).')) return;
+    letterState().text = LETTER_TEMPLATE; ta.value = LETTER_TEMPLATE; saveState();
+  });
+}
+
+function showWorksheet(andPrint) { printPages([buildWorksheet()], $('wsPreview'), andPrint); }
 
 /* ==========================================================================
    12. FOTO: Entzerren über die vier Eckmarken + Selbstkontrolle
@@ -4715,12 +5000,15 @@ function init() {
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   $('userBadge').addEventListener('click', () => switchTab('users'));
   if (appData.security.enabled) lockApp();
-  initStudio(); initAlphabet(); initUsers(); initGamification();
+  initStudio(); initAlphabet(); initUsers(); initGamification(); initLetter();
   $('sampleSelect').addEventListener('change', renderThumbs);
   $('supportPreviewBtn').addEventListener('click', () => showReport('support', false));
   $('supportPrintBtn').addEventListener('click', () => showReport('support', true));
   $('parentPreviewBtn').addEventListener('click', () => showReport('parent', false));
   $('parentPrintBtn').addEventListener('click', () => showReport('parent', true));
+  $('groupPreviewBtn').addEventListener('click', () => showReport('group', false));
+  $('groupPrintBtn').addEventListener('click', () => showReport('group', true));
+  $('groupPdfBtn').addEventListener('click', () => { downloadBlob(pdfFromCanvases(buildGroupReport($('reportPeriod').value)), `Lerngruppe_${dayKey()}.pdf`); toast('PDF gespeichert.'); });
   $('clearHistoryBtn').addEventListener('click', () => {
     const u = getActiveUser();
     if (!confirm(`Protokoll, Buchstaben-Statistik und Proben von „${u.name}“ löschen? Punkte bleiben erhalten.`)) return;

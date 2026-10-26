@@ -50,6 +50,8 @@ Wichtig:
   - *Förderbericht:* Gesamtwert, alle Bereiche als Balken, die drei wichtigsten Übungsfelder mit Übungstipps, Buchstaben mit Übungsbedarf, Platz für Bemerkungen.
   - *Elternbericht:* Entwicklung vorher → jetzt (erste/letzte Übungen oder die letzten 4 Wochen mit den 4 Wochen davor), Verlauf als Diagramm, Bereiche mit ▲/●/▼, Schriftproben erster und letzter Versuch, Tipps für zu Hause, Unterschriftszeilen.
   - Gewertet werden nur echte Schreibversuche; Nachspuren mit Spurhilfe zählt nicht.
+  - *Lerngruppe (für die Unterlagen der Lehrkraft):* Anzahl der Kinder, Entwicklung jedes Kindes (vorher, jetzt, Δ), Entwicklung der ganzen Gruppe, Anteile verbessert/gleich/verschlechtert, Schwerpunkte für den Unterricht; mehrseitig bei großen Gruppen, auch als PDF.
+- **Elternbrief zu Datenschutz und Einwilligung** (unter „Daten“): Ziel der Maßnahme, erhobene Daten und Zweck, Offline-Betrieb, Speicherdauer, Freiwilligkeit und Rechte, Einwilligungserklärung mit Unterschrift. Felder (Schule, Lerngruppe, Lehrkraft …) und der ganze Text lassen sich in der App ändern; Ausgabe als Ausdruck, Word (.docx) und PDF. Eine leere Vorlage liegt in `docs/`. Vor dem Versand bitte von der/dem Datenschutzbeauftragten der Schule prüfen lassen.
 - **Meine Schrift:** Form je Buchstabe wählen, eigene Formen und Klassen-Vorlagen vorschreiben.
 - **Begleiter:** Drache, Eule oder Fuchs reagieren beim Schreiben und nach der Auswertung. Er sitzt auf der Seite, die die Schreibhand nicht verdeckt: bei Rechtshändern links, bei Linkshändern rechts.
 - **Welten und Abzeichen:** Mit Tropfen sechs Welten aufbauen.
@@ -79,7 +81,7 @@ Hintergründe (`welt_*_hintergrund`) nicht freistellen, sondern als JPEG (ca. 12
 
 ## Tests
 
-Nach jeder Änderung prüfen 22 automatische Tests die App im Browser: Auswertung, Schriftbild auf der Zeile, Bewegungsablauf, Spurhilfe, Kinderansicht, Einstellungen pro Kind, Speicher, Radierer, Untergründe, Heft-Modus, Begleiter, Welten und Baum. Bei jedem Hochladen auf GitHub laufen sie automatisch (Reiter **Actions**; ein grüner Haken heißt bestanden).
+Nach jeder Änderung prüfen 23 automatische Tests die App im Browser: Auswertung, Schriftbild auf der Zeile, Bewegungsablauf, Spurhilfe, Kinderansicht, Einstellungen pro Kind, Speicher, Radierer, Untergründe, Heft-Modus, Begleiter, Welten und Baum. Bei jedem Hochladen auf GitHub laufen sie automatisch (Reiter **Actions**; ein grüner Haken heißt bestanden).
 
 Selbst ausführen (Node.js nötig):
 

@@ -47,6 +47,8 @@ const EXPECT = {
     /Heft 9 mm: .*≈ \d,\d mm/
   ],
   berichte: [/leer: ok/, /Vorschau: true/, /Nachspuren gezählt: false/],
+  gruppe_elternbrief: [/Gruppe: Seiten 1 · Ali: \d+→\d+ \(\d+\), Ben: \d+→\d+ \(-\d+\), Cem: –→– \(–\)/, /40 Kinder: 2 Seiten/, /Brief-Vorschau: [2-4] Seiten/,
+    /Download: Elternbrief_SchreibFlow_4b\.docx/, /Download: Elternbrief_SchreibFlow_4b\.pdf/, /nach Neuladen: 4b \/ true/],
   radierer_untergruende: [/nach Radieren: 1 Strich\(e\), ausgewertet=false/],
   begleiter_seite: [/links-H: .*panel-right/, /Linksh\., Leiste links: .*Klassen lefty$/m]
 };
