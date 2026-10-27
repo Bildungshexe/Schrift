@@ -3463,7 +3463,7 @@ function reportPage() {
   const text = (t, x, y, pt = 12, o = {}) => { font(pt, o.bold); ctx.fillStyle = o.color || RC.ink; ctx.textAlign = o.align || 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(t, x * K, y * K); ctx.textAlign = 'left'; };
   // Text umbrechen; gibt die y-Position unter dem Absatz zurück
   const para = (t, x, y, w, pt = 12, o = {}) => {
-    font(pt, o.bold); const lh = pt * 0.3528 * 1.4, words = String(t).split(' '); let line = '';
+    font(pt, o.bold); const lh = pt * 0.3528 * (o.lh || 1.4), words = String(t).split(' '); let line = '';
     for (const wd of words) {
       const test = line ? line + ' ' + wd : wd;
       if (ctx.measureText(test).width > w * K && line) { text(line, x, y, pt, o); y += lh; line = wd; } else line = test;
@@ -3754,38 +3754,34 @@ const LETTER_FIELDS = [['schule', 'Schule (Name und Anschrift)', 'Name der Schul
 const LETTER_TEMPLATE = `{{schule}}
 {{datum}}
 
-# Information und Einwilligung: Handschrift-Training mit der App „SchreibFlow“
+# Handschrift-Training mit der App „SchreibFlow“ – Information und Einwilligung
 
 Liebe Eltern und Erziehungsberechtigte,
 
-in der Lerngruppe {{gruppe}} üben die Kinder ihre Handschrift auch am Tablet. Dafür nutzen wir die App „SchreibFlow“. Mit diesem Brief informieren wir Sie, welche Daten dabei entstehen, wozu sie dienen und wie sie geschützt werden. Für die Nutzung bitten wir um Ihre Einwilligung.
+in der Lerngruppe {{gruppe}} üben die Kinder ihre Handschrift auch am Tablet mit der App „SchreibFlow“. Hier erfahren Sie, welche Daten dabei entstehen und wie wir sie schützen.
 
 ## Ziel der Maßnahme
-Ihr Kind soll eine saubere, gut lesbare und ermüdungsfreie Handschrift entwickeln. Ausgehend von der gelernten Ausgangsschrift wählt jedes Kind die Buchstabenformen, die es am besten schreiben kann („Mix & Match“). Die App gibt beim Üben sofort Rückmeldung und zeigt, woran Ihr Kind gezielt arbeiten kann. So können wir jedes Kind individuell fördern.
+Ihr Kind soll eine saubere, gut lesbare und ermüdungsfreie Handschrift entwickeln. Die App gibt beim Üben sofort Rückmeldung und zeigt, woran Ihr Kind gezielt arbeiten kann.
 
 ## Welche Daten entstehen – und warum
-- Vorname oder Kürzel Ihres Kindes, damit die Übungen zugeordnet werden können.
-- Die Schreibbewegungen auf dem Tablet: Lage der Striche, Schreibtempo und bei Stiften mit Sensor der Druck. Daraus wertet die App das Schriftbild aus: Form, Größe, Lage auf der Linie, Flüssigkeit und Bewegungsrichtung.
-- Auswertungswerte und Übungsverlauf, damit Fortschritte sichtbar werden und passende Übungen vorgeschlagen werden.
-- Einzelne Schriftproben (erster und letzter Versuch je Buchstabe) für den Vorher-Nachher-Vergleich.
-Es werden keine Fotos, Ton- oder Videoaufnahmen gespeichert. Die Daten dienen ausschließlich der Förderung im Unterricht und sind keine Grundlage für Noten.
+- Vorname oder Kürzel Ihres Kindes, um die Übungen zuzuordnen.
+- Schreibbewegungen auf dem Tablet (Striche, Tempo, ggf. Stiftdruck), aus denen die App das Schriftbild auswertet: Form, Größe, Lage auf der Linie, Flüssigkeit.
+- Auswertungen, Übungsverlauf und einzelne Schriftproben, um Fortschritte sichtbar zu machen.
+Es werden keine Fotos, Ton- oder Videoaufnahmen gespeichert. Die Daten dienen nur der Förderung, nicht der Notengebung.
 
 ## Datenschutz
-- Die App arbeitet offline. Sie überträgt keine Daten über das Internet und nutzt weder eine Cloud noch Künstliche Intelligenz im Internet.
-- Alle Daten werden nur auf dem Schulgerät gespeichert und verlassen die Schule nicht.
-- Zugriff hat nur die Lehrkraft. Das Programm kann mit einem Passwort geschützt werden.
-- Die Daten werden vertraulich behandelt und nicht an Dritte weitergegeben.
-- Berichte zur Entwicklung Ihres Kindes erhalten nur Sie.
+- Die App arbeitet offline: keine Übertragung ins Internet, keine Cloud, keine Künstliche Intelligenz im Internet.
+- Die Daten liegen nur auf dem Schulgerät, verlassen die Schule nicht und werden nicht weitergegeben.
+- Zugriff hat nur die Lehrkraft; das Programm kann mit einem Passwort geschützt werden.
 Rechtsgrundlage ist Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).
 
 ## Speicherdauer
-Die Daten werden {{dauer}} gespeichert und danach gelöscht, ebenso alle Sicherungsdateien. Verlässt Ihr Kind die Lerngruppe oder widerrufen Sie Ihre Einwilligung, löschen wir die Daten Ihres Kindes umgehend.
+Die Daten werden {{dauer}} gespeichert und danach gelöscht – bei Widerruf oder wenn Ihr Kind die Lerngruppe verlässt, sofort.
 
 ## Freiwilligkeit und Ihre Rechte
-Die Teilnahme ist freiwillig. Wenn Sie nicht einwilligen, entsteht Ihrem Kind kein Nachteil; es übt dann auf Papier. Sie können Ihre Einwilligung jederzeit ohne Angabe von Gründen mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO). Sie haben das Recht auf Auskunft, Berichtigung und Löschung der Daten (Art. 15–17 DSGVO) sowie das Recht auf Beschwerde bei der Datenschutz-Aufsichtsbehörde (Art. 77 DSGVO).
+Die Teilnahme ist freiwillig. Ohne Einwilligung übt Ihr Kind auf Papier, ohne Nachteile. Sie können die Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO) und haben das Recht auf Auskunft, Berichtigung und Löschung (Art. 15–17 DSGVO) sowie auf Beschwerde bei der Datenschutz-Aufsichtsbehörde (Art. 77 DSGVO).
 
-## Kontakt
-Lehrkraft: {{lehrkraft}}, {{kontakt}}
+Kontakt: {{lehrkraft}}, {{kontakt}}
 Datenschutzbeauftragte/r der Schule: {{dsb}}
 
 Mit freundlichen Grüßen
@@ -3808,44 +3804,44 @@ function letterState() {
   if (!isObj(appData.letter)) appData.letter = { text: LETTER_TEMPLATE, fields: {} };
   return appData.letter;
 }
-function letterLines() {
-  const L = letterState(), f = { ...L.fields, datum: new Date().toLocaleDateString('de-DE') };
-  // Leere Felder: Speicherdauer mit Vorschlag, alles andere als Linie zum Ausfüllen von Hand
-  return L.text.replace(/\{\{(\w+)\}\}/g, (m, k) => (f[k] && String(f[k]).trim()) || (k === 'dauer' ? 'bis zum Ende des Schuljahres 2026/27' : '____________________')).split('\n');
+// Feldinhalte einsetzen. Leere Felder: Speicherdauer mit Vorschlag, alles andere als Linie zum Ausfüllen von Hand
+function letterFill(t) {
+  const f = { ...letterState().fields, datum: new Date().toLocaleDateString('de-DE') };
+  return t.replace(/\{\{(\w+)\}\}/g, (m, k) => (f[k] && String(f[k]).trim()) || (k === 'dauer' ? 'bis zum Ende des Schuljahres 2026/27' : '____________________'));
 }
-function letterBlocks() { // Zeilen → Blöcke {t: typ, s: text}
-  const out = []; let para = null;
-  for (const raw of letterLines()) {
-    const l = raw.trimEnd();
-    const blk = (t, s) => { para = null; out.push({ t, s }); };
-    if (!l.trim()) { para = null; out.push({ t: 'gap' }); }
-    else if (l.trim() === '%%') blk('page');
-    else if (l.startsWith('## ')) blk('h2', l.slice(3));
-    else if (l.startsWith('# ')) blk('h1', l.slice(2));
-    else if (l.startsWith('- ')) blk('li', l.slice(2));
-    else if (l.startsWith('[ ] ')) blk('box', l.slice(4));
-    else if (l.startsWith('___')) blk('sign', l.replace(/^_+\s*/, ''));
-    else if (l.startsWith('---')) blk('cut', l.replace(/^-+\s*/, ''));
-    else { out.push({ t: 'p', s: l }); para = 1; }
+function letterBlocks() { // Zeilen → Blöcke {t: typ, s: text}; die Art wird vor dem Einsetzen der Felder bestimmt
+  const out = [];
+  for (const raw of letterState().text.split('\n')) {
+    const l = raw.trimEnd(), add = (t, x) => out.push({ t, s: letterFill(x) });
+    if (!l.trim()) out.push({ t: 'gap' });
+    else if (l.trim() === '%%') out.push({ t: 'page' });
+    else if (l.startsWith('## ')) add('h2', l.slice(3));
+    else if (l.startsWith('# ')) add('h1', l.slice(2));
+    else if (l.startsWith('- ')) add('li', l.slice(2));
+    else if (l.startsWith('[ ] ')) add('box', l.slice(4));
+    else if (l.startsWith('___')) add('sign', l.replace(/^_+\s*/, ''));
+    else if (l.startsWith('---')) add('cut', l.replace(/^-+\s*/, ''));
+    else add('p', l);
   }
   return out;
 }
 function buildLetterPages() {
-  const pages = []; let pg = reportPage(), y = 20; const X0 = 20, W = 170, BOTTOM = 280;
-  const next = () => { pages.push(pg.cv); pg = reportPage(); y = 20; };
+  const pages = []; let pg = reportPage(), y = 17; const X0 = 20, W = 170, BOTTOM = 284, PT_B = 11, LH = 1.32;
+  const next = () => { pages.push(pg.cv); pg = reportPage(); y = 17; };
   const need = h => { if (y + h > BOTTOM) next(); };
   // Höhe eines Absatzes vorab schätzen, damit er nicht über den Seitenrand läuft
-  const est = (s, w, pt) => { pg.ctx.font = `${pt * PT}px ${SYS_SANS}`; return Math.ceil(pg.ctx.measureText(s).width * 1.06 / (w * K)) * pt * 0.3528 * 1.4; };
+  const est = (s, w, pt) => { pg.ctx.font = `${pt * PT}px ${SYS_SANS}`; return Math.ceil(pg.ctx.measureText(s).width * 1.06 / (w * K)) * pt * 0.3528 * LH; };
+  const o = x => ({ lh: LH, ...x });
   for (const b of letterBlocks()) {
     if (b.t === 'page') { next(); continue; }
-    if (b.t === 'gap') { y += 3; continue; }
-    if (b.t === 'h1') { need(14); y += 4; y = pg.para(b.s, X0, y + 3, W, 15, { bold: true, color: RC.accent }) + 1; continue; }
-    if (b.t === 'h2') { need(12); y += 3; y = pg.para(b.s, X0, y + 2, W, 12.5, { bold: true }) + 0.5; continue; }
-    if (b.t === 'li') { need(est(b.s, W - 6, 11.5)); pg.text('•', X0 + 1, y, 11.5); y = pg.para(b.s, X0 + 6, y, W - 6, 11.5) + 0.8; continue; }
-    if (b.t === 'box') { need(est(b.s, W - 8, 11.5) + 2); pg.ctx.strokeStyle = RC.ink; pg.ctx.lineWidth = 0.35 * K; pg.ctx.strokeRect((X0) * K, (y - 3.6) * K, 4.2 * K, 4.2 * K); y = pg.para(b.s, X0 + 8, y, W - 8, 11.5) + 2; continue; }
+    if (b.t === 'gap') { y += 1.6; continue; }
+    if (b.t === 'h1') { need(14); y += 2; y = pg.para(b.s, X0, y + 3, W, 14, o({ bold: true, color: RC.accent })) + 0.5; continue; }
+    if (b.t === 'h2') { need(16); y += 1.5; y = pg.para(b.s, X0, y + 2, W, 12, o({ bold: true })); continue; } // nie allein am Seitenende
+    if (b.t === 'li') { need(est(b.s, W - 6, PT_B)); pg.text('•', X0 + 1, y, PT_B); y = pg.para(b.s, X0 + 6, y, W - 6, PT_B, o()) + 0.4; continue; }
+    if (b.t === 'box') { need(est(b.s, W - 8, PT_B) + 2); pg.ctx.strokeStyle = RC.ink; pg.ctx.lineWidth = 0.35 * K; pg.ctx.strokeRect(X0 * K, (y - 3.6) * K, 4.2 * K, 4.2 * K); y = pg.para(b.s, X0 + 8, y, W - 8, PT_B, o()) + 2; continue; }
     if (b.t === 'cut') { need(12); y += 2; pg.ctx.setLineDash([2 * K, 1.5 * K]); pg.hline(15, 195, y, RC.muted, 0.3); pg.ctx.setLineDash([]); pg.text('✂ ' + b.s, 105, y + 5, 11, { color: RC.muted, align: 'center' }); y += 12; continue; }
     if (b.t === 'sign') { need(18); y += 12; const [l, r] = b.s.split('|').map(t => t.trim()); pg.hline(X0, X0 + 65, y, RC.ink, 0.3); pg.hline(X0 + 80, X0 + W, y, RC.ink, 0.3); pg.text(l || '', X0, y + 4.5, 11, { color: RC.muted }); pg.text(r || '', X0 + 80, y + 4.5, 11, { color: RC.muted }); y += 7; continue; }
-    need(est(b.s, W, 11.5)); y = pg.para(b.s, X0, y, W, 11.5) + 0.5;
+    need(est(b.s, W, PT_B)); y = pg.para(b.s, X0, y, W, PT_B, o()) + 0.3;
   }
   pages.push(pg.cv);
   return pages;
@@ -3859,19 +3855,19 @@ function letterDocx() {
     const pb = pendingBreak ? '<w:pageBreakBefore/>' : ''; if (b.t !== 'gap' && b.t !== 'page') pendingBreak = false;
     if (b.t === 'page') { pendingBreak = true; continue; }
     if (b.t === 'gap') { continue; }
-    if (b.t === 'h1') body += p(run(b.s, { b: 1, sz: 30, color: '5636D9' }), pb + '<w:keepNext/><w:spacing w:before="240" w:after="120"/>');
-    else if (b.t === 'h2') body += p(run(b.s, { b: 1, sz: 25 }), pb + '<w:keepNext/><w:spacing w:before="200" w:after="60"/>');
-    else if (b.t === 'li') body += p(run('•\t') + run(b.s), pb + '<w:tabs><w:tab w:val="left" w:pos="360"/></w:tabs><w:ind w:left="360" w:hanging="360"/><w:spacing w:after="60"/>');
+    if (b.t === 'h1') body += p(run(b.s, { b: 1, sz: 28, color: '5636D9' }), pb + '<w:keepNext/><w:spacing w:before="160" w:after="80"/>');
+    else if (b.t === 'h2') body += p(run(b.s, { b: 1, sz: 24 }), pb + '<w:keepNext/><w:spacing w:before="140" w:after="20"/>');
+    else if (b.t === 'li') body += p(run('•\t') + run(b.s), pb + '<w:tabs><w:tab w:val="left" w:pos="360"/></w:tabs><w:ind w:left="360" w:hanging="360"/><w:spacing w:after="20"/>');
     else if (b.t === 'box') body += p(run('☐\t', { sz: 28 }) + run(b.s), pb + '<w:tabs><w:tab w:val="left" w:pos="480"/></w:tabs><w:ind w:left="480" w:hanging="480"/><w:spacing w:before="120" w:after="120"/>');
     else if (b.t === 'cut') body += p(run('✂ - - - - - - - - ' + b.s + ' - - - - - - - -', { color: '5D6B86', sz: 22 }), pb + '<w:jc w:val="center"/><w:spacing w:after="240"/>');
     else if (b.t === 'sign') { const [l, r] = b.s.split('|').map(t => t.trim());
       body += p(run('______________________________\t______________________________'), pb + '<w:tabs><w:tab w:val="left" w:pos="4800"/></w:tabs><w:spacing w:before="600"/>');
       body += p(run(l || '', { sz: 22, color: '5D6B86' }) + run('\t') + run(r || '', { sz: 22, color: '5D6B86' }), '<w:tabs><w:tab w:val="left" w:pos="4800"/></w:tabs>'); }
-    else body += p(run(b.s), pb + '<w:spacing w:after="80"/>');
+    else body += p(run(b.s), pb + '<w:spacing w:after="40"/>');
   }
   const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
   const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document ${W}><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
-  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="23"/><w:szCs w:val="23"/><w:lang w:val="de-DE"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>`;
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="de-DE"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="40" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>`;
   return zipStore([
     ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>'],
     ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
